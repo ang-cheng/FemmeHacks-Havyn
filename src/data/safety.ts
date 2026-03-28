@@ -22,13 +22,13 @@ export const voiceOptions: VoiceOption[] = [
   },
   {
     id: 'Yy9hdn23JDNfhVPIWlHY',
-    name: 'Soothing Friend',
-    description: 'Trustworthy companion',
+    name: 'College Friend',
+    description: 'Casual and friendly',
   },
   {
     id: 'qmm0vRXCIew16ilYAeiI',
     name: 'Trustworthy Friend',
-    description: 'Trustworthy and reliable',
+    description: 'Reliable and present',
   },
   {
     id: 'GIJE29YWWeAkgRFZxlrX',

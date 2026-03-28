@@ -71,20 +71,22 @@ export function SelectionCard({
   rightAccessory,
 }: SelectionCardProps) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.selectionCard, selected && styles.selectionCardSelected]}
-    >
-      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-        {selected ? <View style={styles.radioInner} /> : null}
-      </View>
-      <View style={styles.selectionBody}>
-        <Text style={styles.selectionTitle}>{title}</Text>
-        <Text style={styles.selectionDescription}>{description}</Text>
-      </View>
+    <View style={[styles.selectionCard, selected && styles.selectionCardSelected]}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onPress}
+        style={styles.selectionCardMain}
+      >
+        <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+          {selected ? <View style={styles.radioInner} /> : null}
+        </View>
+        <View style={styles.selectionBody}>
+          <Text style={styles.selectionTitle}>{title}</Text>
+          <Text style={styles.selectionDescription}>{description}</Text>
+        </View>
+      </Pressable>
       {rightAccessory ? <View style={styles.selectionAccessory}>{rightAccessory}</View> : null}
-    </Pressable>
+    </View>
   );
 }
 
@@ -211,6 +213,12 @@ const styles = StyleSheet.create({
   selectionCardSelected: {
     borderColor: HavynColors.accent,
     backgroundColor: HavynColors.accentSoft,
+  },
+  selectionCardMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
   },
   radioOuter: {
     width: 22,

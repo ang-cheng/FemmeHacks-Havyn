@@ -1,13 +1,18 @@
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Audio } from 'expo-av';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { HavynColors } from '@/constants/havyn';
 import { useSafetyPlan } from '@/context/SafetyPlanContext';
 import { emergencyContacts, voiceOptions } from '@/data/safety';
+import { fetchTtsBase64 } from '@/lib/tts';
 import { fakeCallScenarios } from '../../../scenarios/fakeCallScenarios';
 
 import { InitialAvatar, SectionHeader, SelectionCard, StatusPill, SurfaceCard, ToggleSwitch } from './common';
+
+const VOICE_PREVIEW_PHRASE =
+  "Hello! It's nice to meet you. How can I help you?";
 
 function formatScriptPreview(transcript: { speaker: string; text: string }[]): string {
   return transcript
@@ -26,7 +31,74 @@ export function PlanScreen() {
   const [sendTextEnabled, setSendTextEnabled] = useState(true);
   const [shareLocationEnabled, setShareLocationEnabled] = useState(true);
   const [checkInEnabled, setCheckInEnabled] = useState(true);
-  const [checkInMinutes, setCheckInMinutes] = useState(10);
+  const [checkInMinutes, setCheckInMinutes] = useState(1);
+  const [activePreview, setActivePreview] = useState<{
+    voiceId: string;
+    loading: boolean;
+  } | null>(null);
+
+  const previewSoundRef = useRef<Audio.Sound | null>(null);
+
+  const stopVoicePreview = useCallback(async () => {
+    if (previewSoundRef.current) {
+      try {
+        await previewSoundRef.current.stopAsync();
+        await previewSoundRef.current.unloadAsync();
+      } catch {
+        /* ignore */
+      }
+      previewSoundRef.current = null;
+    }
+    setActivePreview(null);
+  }, []);
+
+  const playVoicePreview = useCallback(
+    async (voiceId: string) => {
+      await stopVoicePreview();
+      setActivePreview({ voiceId, loading: true });
+
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          allowsRecordingIOS: false,
+        });
+
+        const base64 = await fetchTtsBase64(VOICE_PREVIEW_PHRASE, voiceId);
+        const uri = `data:audio/mpeg;base64,${base64}`;
+
+        const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+        previewSoundRef.current = sound;
+        setActivePreview({ voiceId, loading: false });
+
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            void stopVoicePreview();
+          }
+        });
+      } catch {
+        setActivePreview(null);
+        previewSoundRef.current = null;
+      }
+    },
+    [stopVoicePreview]
+  );
+
+  const handleVoicePlayPress = useCallback(
+    (voiceId: string) => {
+      if (activePreview?.voiceId === voiceId && !activePreview.loading) {
+        void stopVoicePreview();
+        return;
+      }
+      void playVoicePreview(voiceId);
+    },
+    [activePreview, playVoicePreview, stopVoicePreview]
+  );
+
+  useEffect(() => {
+    return () => {
+      void stopVoicePreview();
+    };
+  }, [stopVoicePreview]);
 
   return (
     <ScrollView
@@ -68,24 +140,42 @@ export function PlanScreen() {
         <SurfaceCard style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Voice Selection</Text>
           <View style={styles.cardStack}>
-            {voiceOptions.map((voice) => (
-              <SelectionCard
-                key={voice.id}
-                title={voice.name}
-                description={voice.description}
-                selected={voice.id === selectedVoiceId}
-                onPress={() => setSelectedVoiceId(voice.id)}
-                rightAccessory={
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => setSelectedVoiceId(voice.id)}
-                    style={styles.playButton}
-                  >
-                    <Feather color={HavynColors.text} name="play" size={16} />
-                  </Pressable>
-                }
-              />
-            ))}
+            {voiceOptions.map((voice) => {
+              const isThisPreview = activePreview?.voiceId === voice.id;
+              const isLoading = isThisPreview && activePreview?.loading;
+              const isPlaying = isThisPreview && !activePreview?.loading;
+
+              return (
+                <SelectionCard
+                  key={voice.id}
+                  title={voice.name}
+                  description={voice.description}
+                  selected={voice.id === selectedVoiceId}
+                  onPress={() => setSelectedVoiceId(voice.id)}
+                  rightAccessory={
+                    <Pressable
+                      accessibilityLabel={
+                        isPlaying ? 'Stop voice preview' : 'Play voice preview'
+                      }
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      onPress={() => handleVoicePlayPress(voice.id)}
+                      style={styles.playButton}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color={HavynColors.accent} size="small" />
+                      ) : (
+                        <Feather
+                          color={HavynColors.text}
+                          name={isPlaying ? 'square' : 'play'}
+                          size={isPlaying ? 14 : 16}
+                        />
+                      )}
+                    </Pressable>
+                  }
+                />
+              );
+            })}
           </View>
         </SurfaceCard>
 
@@ -144,7 +234,7 @@ export function PlanScreen() {
                 <ToggleSwitch value={checkInEnabled} onValueChange={setCheckInEnabled} />
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setCheckInMinutes((current) => (current === 15 ? 5 : current + 5))}
+                  onPress={() => setCheckInMinutes((current) => (current === 3 ? 1 : current + 1))}
                   style={styles.checkInButton}
                 >
                   <Text style={styles.checkInButtonText}>{checkInMinutes} min</Text>

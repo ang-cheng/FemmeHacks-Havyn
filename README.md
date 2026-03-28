@@ -1,56 +1,94 @@
-# Welcome to your Expo app 👋
+# Havyn
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Havyn is an Expo React Native app with a local Express backend for services like TTS.
 
-## Get started
+## Project setup
 
-1. Install dependencies
+This project has two parts:
 
-   ```bash
-   npm install
-   ```
+- **Frontend:** Expo React Native app in the home `Havyn` directory
+- **Backend:** Express server in the `server` directory
 
-2. Start the app
+## Frontend setup
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+From the home `Havyn` directory, install frontend dependencies:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Backend setup
 
-### Other setup steps
+From the home `Havyn` directory, move into the backend folder:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+cd server
+```
 
-## Learn more
+Install backend dependencies:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm install
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Create a `.env` file in the `server` directory:
 
-## Join the community
+```bash
+touch .env
+```
 
-Join our community of developers creating universal apps.
+Then add the following to `server/.env`:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```env
+PORT=3000
+ELEVENLABS_API_KEY=YOUR-API-KEY
+```
+
+Replace `YOUR-API-KEY` with your actual ElevenLabs API key.
+
+## Running the app
+
+First, start the backend from the `server` directory:
+
+```bash
+npm run dev
+```
+
+Then, in a **separate terminal window**, go back to the home `Havyn` directory and start the frontend:
+
+```bash
+cd ..
+npx expo start
+```
+
+If you are not currently in the `server` directory, you can also open a new terminal directly in the home `Havyn` directory and run:
+
+```bash
+npx expo start
+```
+
+## Backend and frontend connection
+
+When the backend is running locally on your Mac and the frontend is running in Expo, the frontend should be configured to point to the backend server.
+
+For local development on a physical iPhone using Expo Go, make sure the frontend uses your Mac’s local IP address rather than `localhost` or `127.0.0.1`.
+
+Once the backend is running with:
+
+```bash
+npm run dev
+```
+
+and the frontend is running with:
+
+```bash
+npx expo start
+```
+
+the frontend and backend should now be connected.
+
+## Notes
+
+- Make sure your phone and computer are on the same Wi-Fi if testing on a physical device.
+- Do not use `localhost` or `127.0.0.1` on a physical phone to reach the backend.
+- Keep the backend running in one terminal and the Expo frontend running in another.
