@@ -1,0 +1,104 @@
+{
+  "id": "walking-home",
+  "persona_name": "Jordan",
+  "voice_id": "PASTE_YOUR_VOICE_ID_HERE",
+  "sections": {
+    "opening": [
+      {
+        "id": "open-1",
+        "ai_line": "Hey, you leave yet? I was starting to worry a little.",
+        "user_prompt": "Yeah just left, I'm walking now",
+        "user_timer_seconds": 5,
+        "audio_file": "open-1.mp3"
+      },
+      {
+        "id": "open-2",
+        "ai_line": "Okay good. Stay on with me, I'm not doing anything anyway.",
+        "user_prompt": "Yeah okay, how was your day?",
+        "user_timer_seconds": 5,
+        "audio_file": "open-2.mp3"
+      }
+    ],
+    "loop": [
+      {
+        "id": "loop-1",
+        "ai_line": "It was long honestly. Had back to back meetings all afternoon.",
+        "user_prompt": "Ugh that sounds rough, what were they about?",
+        "user_timer_seconds": 6,
+        "audio_file": "loop-1.mp3"
+      },
+      {
+        "id": "loop-2",
+        "ai_line": "Just the quarterly stuff. Boring. Anyway how far are you now?",
+        "user_prompt": "Maybe seven or eight minutes, just passing the main road",
+        "user_timer_seconds": 6,
+        "audio_file": "loop-2.mp3"
+      },
+      {
+        "id": "loop-3",
+        "ai_line": "Okay good, you're on the lit street yeah? Not the back one?",
+        "user_prompt": "Yeah the main one, there's people around",
+        "user_timer_seconds": 5,
+        "audio_file": "loop-3.mp3"
+      },
+      {
+        "id": "loop-4",
+        "ai_line": "Good. I literally cannot wait for you to be home. Making pasta by the way.",
+        "user_prompt": "Oh yes please, I'm starving",
+        "user_timer_seconds": 4,
+        "audio_file": "loop-4.mp3"
+      },
+      {
+        "id": "loop-5",
+        "ai_line": "So my coworker cc'd the entire company on an email meant for one person.",
+        "user_prompt": "No way, what did it say?",
+        "user_timer_seconds": 5,
+        "audio_file": "loop-5.mp3"
+      },
+      {
+        "id": "loop-6",
+        "ai_line": "Just a complaint about the coffee machine but still. Anyway almost there?",
+        "user_prompt": "Yeah getting closer, maybe five minutes",
+        "user_timer_seconds": 5,
+        "audio_file": "loop-6.mp3"
+      },
+      {
+        "id": "loop-7",
+        "ai_line": "Perfect. I can see you on Find My, you're doing great.",
+        "user_prompt": "Okay good, keep talking to me",
+        "user_timer_seconds": 4,
+        "audio_file": "loop-7.mp3"
+      },
+      {
+        "id": "loop-8",
+        "ai_line": "Always. Garlic bread too or is that extra?",
+        "user_prompt": "That's never extra, yes please",
+        "user_timer_seconds": 4,
+        "audio_file": "loop-8.mp3"
+      },
+      {
+        "id": "loop-9",
+        "ai_line": "Correct answer. Putting it in now. Just keep walking.",
+        "user_prompt": "I am, almost at our street",
+        "user_timer_seconds": 5,
+        "audio_file": "loop-9.mp3"
+      }
+    ],
+    "closing": [
+      {
+        "id": "close-1",
+        "ai_line": "Oh wait, are you good? You sound like you just got in.",
+        "user_prompt": "Yeah I'm good, I'm safe now",
+        "user_timer_seconds": 4,
+        "audio_file": "close-1.mp3"
+      },
+      {
+        "id": "close-2",
+        "ai_line": "Good. Okay come inside, dinner's ready. Love you.",
+        "user_prompt": null,
+        "user_timer_seconds": 0,
+        "audio_file": "close-2.mp3"
+      }
+    ]
+  }
+}
