@@ -1,5 +1,5 @@
 export const HavynColors = {
-  background: '#F5F7FB',
+  background: '#FFFFFF',
   surface: '#FFFFFF',
   surfaceMuted: '#F1F4F9',
   text: '#141B2C',

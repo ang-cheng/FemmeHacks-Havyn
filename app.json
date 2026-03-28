@@ -8,7 +8,7 @@
     "scheme": "havyn",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon/Assets/expo-symbol 2.svg"
     },
     "android": {
       "adaptiveIcon": {

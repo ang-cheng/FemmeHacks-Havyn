@@ -106,10 +106,12 @@ export function PlanScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <SectionHeader
+       <View style={{ paddingTop: 50 }}>
+        <SectionHeader
         title="Safety Plan"
         subtitle="Customize your emergency settings and default support flow."
-      />
+        />
+       </View>
 
       <View style={styles.sectionStack}>
         <SurfaceCard style={styles.sectionCard}>
@@ -180,8 +182,13 @@ export function PlanScreen() {
         </SurfaceCard>
 
         <SurfaceCard style={styles.sectionCard}>
+          {/* Title row (can still be inline if you want) */}
           <View style={styles.inlineHeader}>
             <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+          </View>
+
+          {/* Button row below the title */}
+          <View style={[styles.inlineHeader, { justifyContent: 'flex-end' }]}>
             <Pressable accessibilityRole="button" style={styles.addButton}>
               <Feather color={HavynColors.white} name="plus" size={16} />
               <Text style={styles.addButtonText}>Add Contact</Text>
@@ -196,7 +203,7 @@ export function PlanScreen() {
                   <Text style={styles.contactName}>{contact.name}</Text>
                   <Text style={styles.contactPhone}>{contact.phone}</Text>
                 </View>
-                <StatusPill label={contact.status} tone={contact.status === 'Primary' ? 'accent' : 'success'} />
+                <StatusPill label={contact.status} tone={contact.status === 'Main' ? 'accent' : 'success'} />
               </View>
             ))}
           </View>

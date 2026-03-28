@@ -27,7 +27,6 @@ type EmergencyCallOverlayProps = {
 const caller = {
   name: 'Sarah',
   label: 'mobile',
-  initial: 'S',
 };
 
 export function EmergencyCallOverlay({
@@ -424,9 +423,6 @@ export function EmergencyCallOverlay({
               <Text style={styles.countdownNumber}>{countdown}</Text>
             </View>
             <Text style={styles.countdownTitle}>Starting safety call...</Text>
-            <Text style={styles.countdownSubtitle}>
-              Your preset conversation is being launched now.
-            </Text>
           </View>
         </LinearGradient>
       ) : (
@@ -490,41 +486,6 @@ export function EmergencyCallOverlay({
               <Text style={styles.callerLabel}>{caller.label}</Text>
               <Text style={styles.callerName}>{caller.name}</Text>
               <Text style={styles.callDuration}>{durationLabel}</Text>
-            </View>
-
-            <View style={styles.avatarSection}>
-              <Animated.View
-                style={[
-                  styles.avatarGlow,
-                  {
-                    transform: [{ scale: avatarScale }],
-                    opacity: avatarOpacity,
-                  },
-                ]}
-              />
-              <LinearGradient
-                colors={['#4989FF', '#6D5BFF']}
-                start={{ x: 0.2, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatarCircle}
-              >
-                <Text style={styles.avatarInitial}>{caller.initial}</Text>
-              </LinearGradient>
-
-              <View style={styles.waveRow}>
-                {bars.map((bar, index) => (
-                  <Animated.View
-                    key={`bar-${index}`}
-                    style={[
-                      styles.waveBar,
-                      {
-                        transform: [{ scaleY: bar }],
-                        opacity: index % 3 === 0 ? 0.9 : 0.65,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
             </View>
 
             <View style={styles.controlsSection}>
@@ -877,7 +838,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.72)',
   },
   controlsSection: {
-    gap: 24,
+    gap: 32,
   },
   controlsGrid: {
     flexDirection: 'row',

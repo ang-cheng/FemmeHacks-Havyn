@@ -290,10 +290,12 @@ export function MapScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <SectionHeader
-        title="Nearby Safe Places"
-        subtitle="Find open campus resources and a fast route to help."
-      />
+      <View style={{ paddingTop: 50 }}>
+        <SectionHeader
+          title="Nearby Safe Places"
+          subtitle="Find open campus resources and a fast route to help."
+        />
+      </View>
 
       <MapSearchBar
         onChangeText={setSearchQuery}

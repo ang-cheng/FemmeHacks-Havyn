@@ -10,7 +10,7 @@ export type Contact = {
   id: string;
   name: string;
   phone: string;
-  status: 'Primary' | 'Safe';
+  status: 'Main' | 'Safe';
   initials: string;
 };
 
@@ -42,7 +42,7 @@ export const emergencyContacts: Contact[] = [
     id: 'sarah',
     name: 'Sarah Kim',
     phone: '+1 (555) 123-4567',
-    status: 'Primary',
+    status: 'Main',
     initials: 'SK',
   },
   {
