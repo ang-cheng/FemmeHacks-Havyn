@@ -65,19 +65,24 @@ export const scenarioOptions: ScenarioOption[] = [
 
 export const voiceOptions: VoiceOption[] = [
   {
-    id: 'calm-female',
-    name: 'Calm female voice',
-    description: 'Reassuring and friendly',
+    id: 'sB7vwSCyX0tQmU24cW2C',
+    name: 'Neutral Authoritative',
+    description: 'Grounding and confident',
   },
   {
-    id: 'deep-male',
-    name: 'Deep male voice',
-    description: 'Confident and protective',
+    id: 'Yy9hdn23JDNfhVPIWlHY',
+    name: 'Soothing Friend',
+    description: 'Trustworthy companion',
   },
   {
-    id: 'neutral',
-    name: 'Friendly neutral voice',
+    id: 'qmm0vRXCIew16ilYAeiI',
+    name: 'Bubbly Friend',
     description: 'Warm and approachable',
+  },
+  {
+    id: 'GIJE29YWWeAkgRFZxlrX',
+    name: 'Coach Cupp',
+    description: 'Realistic and down-to-earth',
   },
 ];
 
