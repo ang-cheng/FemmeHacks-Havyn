@@ -2,18 +2,41 @@ import { Feather } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { HavynColors } from '@/constants/havyn';
 import { useSafetyPlan } from '@/context/SafetyPlanContext';
-import { emergencyContacts, voiceOptions } from '@/data/safety';
+import { type Contact, emergencyContacts as defaultEmergencyContacts, voiceOptions } from '@/data/safety';
 import { fetchTtsBase64 } from '@/lib/tts';
 import { fakeCallScenarios } from '../../../scenarios/fakeCallScenarios';
 
-import { InitialAvatar, SectionHeader, SelectionCard, StatusPill, SurfaceCard, ToggleSwitch } from './common';
+import { InitialAvatar, SectionHeader, SelectionCard, SurfaceCard, ToggleSwitch } from './common';
 
 const VOICE_PREVIEW_PHRASE =
   "Hello! It's nice to meet you. How can I help you?";
+
+function initialsFromName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return '?';
+  }
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return trimmed.slice(0, 2).toUpperCase();
+}
 
 export function PlanScreen() {
   const router = useRouter();
@@ -32,6 +55,13 @@ export function PlanScreen() {
     voiceId: string;
     loading: boolean;
   } | null>(null);
+
+  const [contacts, setContacts] = useState<Contact[]>(() =>
+    defaultEmergencyContacts.map((c) => ({ ...c }))
+  );
+  const [addContactOpen, setAddContactOpen] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
 
   const previewSoundRef = useRef<Audio.Sound | null>(null);
 
@@ -95,6 +125,37 @@ export function PlanScreen() {
       void stopVoicePreview();
     };
   }, [stopVoicePreview]);
+
+  const openAddContactModal = () => {
+    setNewContactName('');
+    setNewContactPhone('');
+    setAddContactOpen(true);
+  };
+
+  const closeAddContactModal = () => {
+    setAddContactOpen(false);
+  };
+
+  const saveNewContact = () => {
+    const name = newContactName.trim();
+    const phone = newContactPhone.trim();
+    if (!name || !phone) {
+      return;
+    }
+    const id = `contact-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const next: Contact = {
+      id,
+      name,
+      phone,
+      initials: initialsFromName(name),
+    };
+    setContacts((prev) => [...prev, next]);
+    closeAddContactModal();
+  };
+
+  const deleteContact = (id: string) => {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+  };
 
   return (
     <ScrollView
@@ -183,32 +244,118 @@ export function PlanScreen() {
         </SurfaceCard>
 
         <SurfaceCard style={styles.sectionCard}>
-          {/* Title row (can still be inline if you want) */}
           <View style={styles.inlineHeader}>
             <Text style={styles.sectionTitle}>Emergency Contacts</Text>
-          </View>
-
-          {/* Button row below the title */}
-          <View style={[styles.inlineHeader, { justifyContent: 'flex-end' }]}>
-            <Pressable accessibilityRole="button" style={styles.addButton}>
-              <Feather color={HavynColors.white} name="plus" size={16} />
-              <Text style={styles.addButtonText}>Add Contact</Text>
+            <Pressable
+              accessibilityLabel="Add contact"
+              accessibilityRole="button"
+              hitSlop={6}
+              onPress={openAddContactModal}
+              style={styles.addContactFab}
+            >
+              <Feather color={HavynColors.white} name="plus" size={22} />
             </Pressable>
           </View>
 
-          <View style={styles.cardStack}>
-            {emergencyContacts.map((contact) => (
-              <View key={contact.id} style={styles.contactRow}>
-                <InitialAvatar initials={contact.initials} />
-                <View style={styles.contactBody}>
-                  <Text style={styles.contactName}>{contact.name}</Text>
-                  <Text style={styles.contactPhone}>{contact.phone}</Text>
+          <Text style={styles.contactsExplainer}>
+            When you activate a fake safety call, these people can be alerted by text message so someone
+            knows you may need support.
+          </Text>
+
+          {contacts.length === 0 ? (
+            <Text style={styles.contactsEmpty}>No contacts yet. Add someone you trust.</Text>
+          ) : (
+            <View style={styles.cardStack}>
+              {contacts.map((contact) => (
+                <View key={contact.id} style={styles.contactRow}>
+                  <InitialAvatar initials={contact.initials} />
+                  <View style={styles.contactBody}>
+                    <Text style={styles.contactName}>{contact.name}</Text>
+                    <Text style={styles.contactPhone}>{contact.phone}</Text>
+                  </View>
+                  <Pressable
+                    accessibilityLabel={`Remove ${contact.name}`}
+                    accessibilityRole="button"
+                    hitSlop={8}
+                    onPress={() => deleteContact(contact.id)}
+                    style={styles.deleteContactButton}
+                  >
+                    <Feather color={HavynColors.textMuted} name="trash-2" size={18} />
+                  </Pressable>
                 </View>
-                <StatusPill label={contact.status} tone={contact.status === 'Main' ? 'accent' : 'success'} />
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </SurfaceCard>
+
+        <Modal
+          animationType="fade"
+          onRequestClose={closeAddContactModal}
+          transparent
+          visible={addContactOpen}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalRoot}
+          >
+            <View style={styles.modalSheet}>
+              <Pressable
+                accessibilityLabel="Dismiss"
+                accessibilityRole="button"
+                onPress={closeAddContactModal}
+                style={styles.modalBackdropFill}
+              />
+              <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Add emergency contact</Text>
+              <Text style={styles.modalSubtitle}>
+                They can receive SMS alerts when you start a fake call (if texting is enabled).
+              </Text>
+
+              <Text style={styles.inputLabel}>Name</Text>
+              <TextInput
+                autoCapitalize="words"
+                autoCorrect
+                onChangeText={setNewContactName}
+                placeholder="Full name"
+                placeholderTextColor={HavynColors.textSoft}
+                style={styles.textInput}
+                value={newContactName}
+              />
+
+              <Text style={styles.inputLabel}>Phone number</Text>
+              <TextInput
+                keyboardType="phone-pad"
+                onChangeText={setNewContactPhone}
+                placeholder="+1 (555) 000-0000"
+                placeholderTextColor={HavynColors.textSoft}
+                style={styles.textInput}
+                value={newContactPhone}
+              />
+
+              <View style={styles.modalActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={closeAddContactModal}
+                  style={styles.modalButtonSecondary}
+                >
+                  <Text style={styles.modalButtonSecondaryText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!newContactName.trim() || !newContactPhone.trim()}
+                  onPress={saveNewContact}
+                  style={[
+                    styles.modalButtonPrimary,
+                    (!newContactName.trim() || !newContactPhone.trim()) && styles.modalButtonPrimaryDisabled,
+                  ]}
+                >
+                  <Text style={styles.modalButtonPrimaryText}>Save</Text>
+                </Pressable>
+              </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
         <SurfaceCard style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Auto Safety Features</Text>
@@ -325,19 +472,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  addButton: {
-    flexDirection: 'row',
+  addContactFab: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
+    justifyContent: 'center',
     backgroundColor: HavynColors.accent,
-  },
-  addButtonText: {
-    color: HavynColors.white,
-    fontSize: 13,
-    fontWeight: '700',
   },
   contactRow: {
     flexDirection: 'row',
@@ -403,6 +544,102 @@ const styles = StyleSheet.create({
   checkInButtonText: {
     color: HavynColors.accent,
     fontSize: 13,
+    fontWeight: '700',
+  },
+  contactsExplainer: {
+    color: HavynColors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  contactsEmpty: {
+    color: HavynColors.textSoft,
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  deleteContactButton: {
+    padding: 6,
+    marginLeft: 4,
+  },
+  modalRoot: {
+    flex: 1,
+  },
+  modalSheet: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 28,
+    backgroundColor: 'rgba(15, 24, 40, 0.45)',
+  },
+  modalBackdropFill: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    backgroundColor: HavynColors.surface,
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    gap: 10,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  modalTitle: {
+    color: HavynColors.text,
+    fontSize: 19,
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    color: HavynColors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  inputLabel: {
+    color: HavynColors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: HavynColors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: HavynColors.text,
+    backgroundColor: HavynColors.surfaceMuted,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 14,
+  },
+  modalButtonSecondary: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  modalButtonSecondaryText: {
+    color: HavynColors.textMuted,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonPrimary: {
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: HavynColors.accent,
+  },
+  modalButtonPrimaryDisabled: {
+    opacity: 0.45,
+  },
+  modalButtonPrimaryText: {
+    color: HavynColors.white,
+    fontSize: 16,
     fontWeight: '700',
   },
 });
