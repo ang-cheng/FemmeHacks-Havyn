@@ -57,7 +57,6 @@ npm run dev
 Then, in a **separate terminal window**, go back to the home `Havyn` directory and start the frontend:
 
 ```bash
-cd ..
 npx expo start
 ```
 
@@ -70,8 +69,6 @@ npx expo start
 ## Backend and frontend connection
 
 When the backend is running locally on your Mac and the frontend is running in Expo, the frontend should be configured to point to the backend server.
-
-For local development on a physical iPhone using Expo Go, make sure the frontend uses your Mac’s local IP address rather than `localhost` or `127.0.0.1`.
 
 Once the backend is running with:
 
