@@ -22,6 +22,8 @@ export type PersistedSafetyPlanState = {
   builtInOverrides: Record<string, BuiltInScenarioOverride>;
   selectedScenarioId?: string;
   selectedVoiceId?: string;
+  checkInEnabled?: boolean;
+  checkInMinutes?: number;
 };
 
 type StorageLike = {
@@ -40,6 +42,21 @@ export function getBuiltInScenarioDefaults() {
   return builtInScenarioDefaults.map((scenario) => ({ ...scenario }));
 }
 
+export function clampCheckInMinutes(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) {
+    return 1;
+  }
+  const rounded = Math.round(n);
+  if (rounded < 1) {
+    return 1;
+  }
+  if (rounded > 3) {
+    return 3;
+  }
+  return rounded;
+}
+
 export function getDefaultPersistedSafetyPlanState(): PersistedSafetyPlanState {
   return {
     version: 1,
@@ -47,6 +64,8 @@ export function getDefaultPersistedSafetyPlanState(): PersistedSafetyPlanState {
     builtInOverrides: {},
     selectedScenarioId: builtInScenarioDefaults[0]?.id ?? '',
     selectedVoiceId: defaultVoiceId,
+    checkInEnabled: true,
+    checkInMinutes: 1,
   };
 }
 
@@ -237,6 +256,8 @@ export async function loadPersistedSafetyPlanState(): Promise<PersistedSafetyPla
           ? parsed.selectedScenarioId
           : builtInScenarioDefaults[0]?.id ?? '',
       selectedVoiceId: typeof parsed.selectedVoiceId === 'string' ? parsed.selectedVoiceId : defaultVoiceId,
+      checkInEnabled: typeof parsed.checkInEnabled === 'boolean' ? parsed.checkInEnabled : true,
+      checkInMinutes: clampCheckInMinutes(parsed.checkInMinutes),
     };
   } catch (error) {
     logStorageError('load', error);

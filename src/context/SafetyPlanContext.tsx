@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type SetStateAction,
 } from 'react';
 
 import { voiceOptions } from '@/data/safety';
@@ -14,6 +15,7 @@ import {
   applyBuiltInOverrides,
   buildDuplicateScenario,
   createCustomScenarioFromDraft,
+  clampCheckInMinutes,
   getDefaultPersistedSafetyPlanState,
   loadPersistedSafetyPlanState,
   normalizeVoiceId,
@@ -42,6 +44,10 @@ type SafetyPlanContextValue = {
   deleteCustomScenario: (id: string) => Promise<void>;
   resetBuiltInScenario: (id: string) => Promise<void>;
   getScenarioById: (id: string) => ManagedFakeCallScenario | undefined;
+  checkInEnabled: boolean;
+  setCheckInEnabled: (value: SetStateAction<boolean>) => void;
+  checkInMinutes: number;
+  setCheckInMinutes: (value: SetStateAction<number>) => void;
 };
 
 const defaultVoiceId = voiceOptions[0]?.id ?? '';
@@ -55,6 +61,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
     () => applyBuiltInOverrides({})[0]?.id ?? ''
   );
   const [selectedVoiceId, setSelectedVoiceIdState] = useState(defaultVoiceId);
+  const [checkInEnabled, setCheckInEnabledState] = useState(true);
+  const [checkInMinutes, setCheckInMinutesState] = useState(1);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSavingScenario, setIsSavingScenario] = useState(false);
   const persistQueueRef = useRef(Promise.resolve());
@@ -80,11 +88,15 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
       nextBuiltInOverrides,
       nextSelectedScenarioId,
       nextSelectedVoiceId,
+      nextCheckInEnabled,
+      nextCheckInMinutes,
     }: {
       nextCustomScenarios: ManagedFakeCallScenario[];
       nextBuiltInOverrides: Record<string, BuiltInScenarioOverride>;
       nextSelectedScenarioId: string;
       nextSelectedVoiceId: string;
+      nextCheckInEnabled: boolean;
+      nextCheckInMinutes: number;
     }) => {
       const payload = {
         version: 1 as const,
@@ -92,6 +104,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         builtInOverrides: nextBuiltInOverrides,
         selectedScenarioId: nextSelectedScenarioId,
         selectedVoiceId: nextSelectedVoiceId,
+        checkInEnabled: nextCheckInEnabled,
+        checkInMinutes: nextCheckInMinutes,
       };
 
       persistQueueRef.current = persistQueueRef.current
@@ -137,6 +151,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         setBuiltInOverrides(persisted.builtInOverrides);
         setSelectedScenarioIdState(resolvedSelectedScenario?.id ?? '');
         setSelectedVoiceIdState(resolvedVoiceId);
+        setCheckInEnabledState(persisted.checkInEnabled ?? true);
+        setCheckInMinutesState(clampCheckInMinutes(persisted.checkInMinutes));
       } catch (error) {
         console.warn(
           '[SafetyPlanContext] Failed to hydrate persisted safety plan state. Using defaults.',
@@ -154,6 +170,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
           setSelectedVoiceIdState(
             normalizeVoiceId(fallbackState.selectedVoiceId || fallbackScenario?.preferredVoiceId || defaultVoiceId)
           );
+          setCheckInEnabledState(fallbackState.checkInEnabled ?? true);
+          setCheckInMinutesState(clampCheckInMinutes(fallbackState.checkInMinutes));
         }
       } finally {
         if (!cancelled) {
@@ -174,6 +192,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         setSelectedVoiceIdState(
           normalizeVoiceId(fallbackState.selectedVoiceId || fallbackScenario?.preferredVoiceId || defaultVoiceId)
         );
+        setCheckInEnabledState(fallbackState.checkInEnabled ?? true);
+        setCheckInMinutesState(clampCheckInMinutes(fallbackState.checkInMinutes));
         setIsHydrated(true);
       }
     });
@@ -209,9 +229,11 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         nextBuiltInOverrides: builtInOverrides,
         nextSelectedScenarioId: scenario.id,
         nextSelectedVoiceId: nextVoiceId,
+        nextCheckInEnabled: checkInEnabled,
+        nextCheckInMinutes: checkInMinutes,
       });
     },
-    [builtInOverrides, customScenarios, isHydrated, queuePersist, scenarios, selectedVoiceId]
+    [builtInOverrides, checkInEnabled, checkInMinutes, customScenarios, isHydrated, queuePersist, scenarios, selectedVoiceId]
   );
 
   const setSelectedVoiceId = useCallback(
@@ -228,9 +250,11 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         nextBuiltInOverrides: builtInOverrides,
         nextSelectedScenarioId: selectedScenarioId || scenarios[0]?.id || '',
         nextSelectedVoiceId: nextVoiceId,
+        nextCheckInEnabled: checkInEnabled,
+        nextCheckInMinutes: checkInMinutes,
       });
     },
-    [builtInOverrides, customScenarios, isHydrated, queuePersist, scenarios, selectedScenarioId]
+    [builtInOverrides, checkInEnabled, checkInMinutes, customScenarios, isHydrated, queuePersist, scenarios, selectedScenarioId]
   );
 
   const createScenario = useCallback(
@@ -254,6 +278,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
           nextBuiltInOverrides: builtInOverrides,
           nextSelectedScenarioId: newScenario.id,
           nextSelectedVoiceId,
+          nextCheckInEnabled: checkInEnabled,
+          nextCheckInMinutes: checkInMinutes,
         });
 
         return newScenario;
@@ -261,7 +287,7 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         setIsSavingScenario(false);
       }
     },
-    [builtInOverrides, customScenarios, queuePersist]
+    [builtInOverrides, checkInEnabled, checkInMinutes, customScenarios, queuePersist]
   );
 
   const updateCustomScenario = useCallback(
@@ -305,6 +331,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
           nextBuiltInOverrides: builtInOverrides,
           nextSelectedScenarioId,
           nextSelectedVoiceId,
+          nextCheckInEnabled: checkInEnabled,
+          nextCheckInMinutes: checkInMinutes,
         });
 
         return updatedScenario;
@@ -312,7 +340,7 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         setIsSavingScenario(false);
       }
     },
-    [builtInOverrides, customScenarios, queuePersist, selectedScenarioId, selectedVoiceId]
+    [builtInOverrides, checkInEnabled, checkInMinutes, customScenarios, queuePersist, selectedScenarioId, selectedVoiceId]
   );
 
   const duplicateScenario = useCallback(
@@ -338,6 +366,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
           nextBuiltInOverrides: builtInOverrides,
           nextSelectedScenarioId: duplicatedScenario.id,
           nextSelectedVoiceId,
+          nextCheckInEnabled: checkInEnabled,
+          nextCheckInMinutes: checkInMinutes,
         });
 
         return duplicatedScenario;
@@ -345,7 +375,7 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         setIsSavingScenario(false);
       }
     },
-    [builtInOverrides, customScenarios, queuePersist, scenarios, selectedVoiceId]
+    [builtInOverrides, checkInEnabled, checkInMinutes, customScenarios, queuePersist, scenarios, selectedVoiceId]
   );
 
   const deleteCustomScenario = useCallback(
@@ -379,12 +409,14 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
           nextBuiltInOverrides: builtInOverrides,
           nextSelectedScenarioId,
           nextSelectedVoiceId,
+          nextCheckInEnabled: checkInEnabled,
+          nextCheckInMinutes: checkInMinutes,
         });
       } finally {
         setIsSavingScenario(false);
       }
     },
-    [builtInOverrides, builtinScenarios, customScenarios, queuePersist, scenarios, selectedScenarioId, selectedVoiceId]
+    [builtInOverrides, builtinScenarios, checkInEnabled, checkInMinutes, customScenarios, queuePersist, scenarios, selectedScenarioId, selectedVoiceId]
   );
 
   const resetBuiltInScenario = useCallback(
@@ -410,9 +442,52 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
         nextBuiltInOverrides,
         nextSelectedScenarioId: selectedScenarioId || builtinScenarios[0]?.id || '',
         nextSelectedVoiceId,
+        nextCheckInEnabled: checkInEnabled,
+        nextCheckInMinutes: checkInMinutes,
       });
     },
-    [builtInOverrides, builtinScenarios, customScenarios, queuePersist, selectedScenarioId, selectedVoiceId]
+    [builtInOverrides, builtinScenarios, checkInEnabled, checkInMinutes, customScenarios, queuePersist, selectedScenarioId, selectedVoiceId]
+  );
+
+  const setCheckInEnabled = useCallback(
+    (value: SetStateAction<boolean>) => {
+      setCheckInEnabledState((prev) => {
+        const next = typeof value === 'function' ? (value as (p: boolean) => boolean)(prev) : value;
+        if (isHydrated) {
+          void queuePersist({
+            nextCustomScenarios: customScenarios,
+            nextBuiltInOverrides: builtInOverrides,
+            nextSelectedScenarioId: selectedScenarioId || scenarios[0]?.id || '',
+            nextSelectedVoiceId: selectedVoiceId,
+            nextCheckInEnabled: next,
+            nextCheckInMinutes: checkInMinutes,
+          });
+        }
+        return next;
+      });
+    },
+    [builtInOverrides, checkInMinutes, customScenarios, isHydrated, queuePersist, scenarios, selectedScenarioId, selectedVoiceId]
+  );
+
+  const setCheckInMinutes = useCallback(
+    (value: SetStateAction<number>) => {
+      setCheckInMinutesState((prev) => {
+        const raw = typeof value === 'function' ? (value as (p: number) => number)(prev) : value;
+        const next = clampCheckInMinutes(raw);
+        if (isHydrated) {
+          void queuePersist({
+            nextCustomScenarios: customScenarios,
+            nextBuiltInOverrides: builtInOverrides,
+            nextSelectedScenarioId: selectedScenarioId || scenarios[0]?.id || '',
+            nextSelectedVoiceId: selectedVoiceId,
+            nextCheckInEnabled: checkInEnabled,
+            nextCheckInMinutes: next,
+          });
+        }
+        return next;
+      });
+    },
+    [builtInOverrides, checkInEnabled, customScenarios, isHydrated, queuePersist, scenarios, selectedScenarioId, selectedVoiceId]
   );
 
   const value = useMemo<SafetyPlanContextValue>(
@@ -436,10 +511,16 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
       deleteCustomScenario,
       resetBuiltInScenario,
       getScenarioById,
+      checkInEnabled,
+      setCheckInEnabled,
+      checkInMinutes,
+      setCheckInMinutes,
     }),
     [
       builtInOverrides,
       builtinScenarios,
+      checkInEnabled,
+      checkInMinutes,
       createScenario,
       customScenarios,
       deleteCustomScenario,
@@ -452,6 +533,8 @@ export function SafetyPlanProvider({ children }: { children: ReactNode }) {
       selectedScenario,
       selectedScenarioId,
       selectedVoiceId,
+      setCheckInEnabled,
+      setCheckInMinutes,
       setSelectedScenarioId,
       setSelectedVoiceId,
       updateCustomScenario,

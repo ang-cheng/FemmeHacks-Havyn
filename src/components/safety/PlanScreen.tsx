@@ -49,11 +49,13 @@ export function PlanScreen() {
     selectedScenario,
     duplicateScenario,
     deleteCustomScenario,
+    checkInEnabled,
+    setCheckInEnabled,
+    checkInMinutes,
+    setCheckInMinutes,
   } = useSafetyPlan();
   const [sendTextEnabled, setSendTextEnabled] = useState(true);
   const [shareLocationEnabled, setShareLocationEnabled] = useState(true);
-  const [checkInEnabled, setCheckInEnabled] = useState(true);
-  const [checkInMinutes, setCheckInMinutes] = useState(1);
   const [activePreview, setActivePreview] = useState<{
     voiceId: string;
     loading: boolean;

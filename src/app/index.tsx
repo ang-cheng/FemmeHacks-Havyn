@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { BottomTabBar } from '@/components/safety/BottomTabBar';
 import { CallScreen } from '@/components/safety/CallScreen';
+import { CheckInModal } from '@/components/safety/CheckInModal';
 import { EmergencyCallOverlay } from '@/components/safety/EmergencyCallOverlay';
 import { MapScreen } from '@/components/safety/MapScreen';
 import { PlanScreen } from '@/components/safety/PlanScreen';
@@ -26,11 +27,14 @@ export default function HomeScreen() {
         </View>
         <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
         {isCallActive ? (
-          <EmergencyCallOverlay
-            isMapVisible={activeTab === 'map'}
-            onExpandCall={() => setActiveTab('call')}
-            onMinimizeToMap={() => setActiveTab('map')}
-          />
+          <>
+            <EmergencyCallOverlay
+              isMapVisible={activeTab === 'map'}
+              onExpandCall={() => setActiveTab('call')}
+              onMinimizeToMap={() => setActiveTab('map')}
+            />
+            <CheckInModal />
+          </>
         ) : null}
       </View>
     </View>
