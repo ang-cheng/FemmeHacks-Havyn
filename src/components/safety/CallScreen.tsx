@@ -388,7 +388,7 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
           <Text style={styles.planDetailText}>Scenario: {selectedScenario.title}</Text>
           <Text style={styles.planDetailText}>Voice: {selectedVoiceLabel}</Text>
         </View>
-      </ScrollView>
+      </View>
 
       {callStage !== 'idle' ? (
         <Pressable accessibilityRole="button" onPress={onOpenMap} style={styles.quickMapButton}>
@@ -396,6 +396,6 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
           <Text style={styles.quickMapButtonText}>Go to map while call continues</Text>
         </Pressable>
       ) : null}
-      </>
+      </ScrollView>
   );
 }
