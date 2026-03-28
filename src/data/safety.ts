@@ -21,24 +21,6 @@ export type Contact = {
   initials: string;
 };
 
-export type SafePlaceType = 'security' | 'police' | 'hospital' | 'business';
-
-export type SafePlace = {
-  id: number;
-  name: string;
-  type: SafePlaceType;
-  distance: string;
-  eta: string;
-  hours: string;
-  isOpen: boolean;
-  campusOnly: boolean;
-  alwaysOpen: boolean;
-  mapPosition: {
-    left: `${number}%`;
-    top: `${number}%`;
-  };
-};
-
 export const scenarioOptions: ScenarioOption[] = [
   {
     id: 'friend',
@@ -110,55 +92,4 @@ export const scriptedPrompts = [
   "Yeah, I'm just walking from the library now.",
   'Can you meet me outside in 5 minutes?',
   "I should be there soon, just keep talking to me.",
-];
-
-export const safePlaces: SafePlace[] = [
-  {
-    id: 1,
-    name: 'Campus Security Office',
-    type: 'security',
-    distance: '0.3 mi',
-    eta: '4 min walk',
-    hours: '24/7',
-    isOpen: true,
-    campusOnly: true,
-    alwaysOpen: true,
-    mapPosition: { left: '24%', top: '33%' },
-  },
-  {
-    id: 2,
-    name: 'University Police Station',
-    type: 'police',
-    distance: '0.5 mi',
-    eta: '7 min walk',
-    hours: '24/7',
-    isOpen: true,
-    campusOnly: true,
-    alwaysOpen: true,
-    mapPosition: { left: '58%', top: '26%' },
-  },
-  {
-    id: 3,
-    name: 'Student Health Center',
-    type: 'hospital',
-    distance: '0.7 mi',
-    eta: '9 min walk',
-    hours: 'Open until 8 PM',
-    isOpen: true,
-    campusOnly: true,
-    alwaysOpen: false,
-    mapPosition: { left: '42%', top: '58%' },
-  },
-  {
-    id: 4,
-    name: 'Main Library (24h)',
-    type: 'business',
-    distance: '0.4 mi',
-    eta: '5 min walk',
-    hours: '24/7',
-    isOpen: true,
-    campusOnly: true,
-    alwaysOpen: true,
-    mapPosition: { left: '70%', top: '48%' },
-  },
 ];
