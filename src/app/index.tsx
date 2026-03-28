@@ -8,7 +8,6 @@ import { EmergencyCallOverlay } from '@/components/safety/EmergencyCallOverlay';
 import { MapScreen } from '@/components/safety/MapScreen';
 import { PlanScreen } from '@/components/safety/PlanScreen';
 import { HavynColors } from '@/constants/havyn';
-import { SafetyPlanProvider } from '@/context/SafetyPlanContext';
 import { useCall } from '@/context/call';
 import { SafetyTab } from '@/data/safety';
 
@@ -17,26 +16,24 @@ export default function HomeScreen() {
   const { isCallActive } = useCall();
 
   return (
-    <SafetyPlanProvider>
-      <View style={styles.screen}>
-        <StatusBar style="dark" />
-        <View style={styles.phoneFrame}>
-          <View style={styles.content}>
-            {activeTab === 'plan' ? <PlanScreen /> : null}
-            {activeTab === 'call' ? <CallScreen onOpenMap={() => setActiveTab('map')} /> : null}
-            {activeTab === 'map' ? <MapScreen /> : null}
-          </View>
-          <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
-          {isCallActive ? (
-            <EmergencyCallOverlay
-              isMapVisible={activeTab === 'map'}
-              onExpandCall={() => setActiveTab('call')}
-              onMinimizeToMap={() => setActiveTab('map')}
-            />
-          ) : null}
+    <View style={styles.screen}>
+      <StatusBar style="dark" />
+      <View style={styles.phoneFrame}>
+        <View style={styles.content}>
+          {activeTab === 'plan' ? <PlanScreen /> : null}
+          {activeTab === 'call' ? <CallScreen onOpenMap={() => setActiveTab('map')} /> : null}
+          {activeTab === 'map' ? <MapScreen /> : null}
         </View>
+        <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
+        {isCallActive ? (
+          <EmergencyCallOverlay
+            isMapVisible={activeTab === 'map'}
+            onExpandCall={() => setActiveTab('call')}
+            onMinimizeToMap={() => setActiveTab('map')}
+          />
+        ) : null}
       </View>
-    </SafetyPlanProvider>
+    </View>
   );
 }
 

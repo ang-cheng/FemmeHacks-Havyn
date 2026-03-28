@@ -31,12 +31,12 @@ export const fakeCallScenarios: FakeCallScenario[] = [
             },
             { speaker: 'user', text: 'Yeah, I have everything.' },
             { speaker: 'caller', text: 'Good. Is it crowded where you are, or no?' },
-            { speaker: 'user', text: 'A little, not really, kind of.' },
+            { speaker: 'user', text: '[A little/not really/kind of]' },
             {
                 speaker: 'caller',
                 text: 'Alright. Just stay where other people are while you walk over. I’m looking for your jacket right now. What are you wearing again?',
             },
-            { speaker: 'user', text: 'I’m wearing [describes clothing].' },
+            { speaker: 'user', text: 'I’m wearing [describe clothing].' },
             {
                 speaker: 'caller',
                 text: 'Okay, got it. I’m by the curb, near the corner, by the front doors. Walk straight there. Don’t worry, I see the entrance.',
@@ -52,7 +52,7 @@ export const fakeCallScenarios: FakeCallScenario[] = [
             { speaker: 'caller', text: 'Good. Once you’re outside, tell me what you see.' },
             {
                 speaker: 'user',
-                text: 'I see the street, cars, the corner, the front steps.',
+                text: 'I see [describe your surroundings]',
             },
             {
                 speaker: 'caller',
@@ -87,12 +87,12 @@ export const fakeCallScenarios: FakeCallScenario[] = [
             { speaker: 'caller', text: 'Good. Call me while you’re walking.' },
             { speaker: 'user', text: 'I’m on with you now.' },
             { speaker: 'caller', text: 'Perfect. Just stay on. Where are you walking from?' },
-            { speaker: 'user', text: '[Answers.]' },
+            { speaker: 'user', text: '[describe your starting location]' },
             {
                 speaker: 'caller',
                 text: 'Okay, that’s fine. Take the more populated route, not the shortcut. Are there people around you?',
             },
-            { speaker: 'user', text: 'Yes, kind of, not many.' },
+            { speaker: 'user', text: '[lots of people/kind of/not many]' },
             {
                 speaker: 'caller',
                 text: 'Alright. Keep to the better-lit side. You don’t need to rush, just keep moving.',
@@ -106,7 +106,7 @@ export const fakeCallScenarios: FakeCallScenario[] = [
             },
             { speaker: 'user', text: 'Let me check… yeah, I have them.' },
             { speaker: 'caller', text: 'Okay, great. Just keep talking to me. What street are you on now?' },
-            { speaker: 'user', text: '[Answers.]' },
+            { speaker: 'user', text: '[describe your current street]' },
             {
                 speaker: 'caller',
                 text: 'Alright, I know where that is. You’re fine. Once you get to the next corner, tell me if it’s quieter over there.',
@@ -131,7 +131,7 @@ export const fakeCallScenarios: FakeCallScenario[] = [
                 speaker: 'caller',
                 text: 'Okay. So anyway, I was going to tell you earlier — [shifts into ordinary conversation]. Did you end up eating anything there? How was it? Who did you go with? Was it crowded?',
             },
-            { speaker: 'user', text: '[Answers.]' },
+            { speaker: 'user', text: '[describe your starting location]' },
             { speaker: 'caller', text: 'Yeah, that sounds about right. Are you getting closer now?' },
             { speaker: 'user', text: 'A little.' },
             {
@@ -153,7 +153,7 @@ export const fakeCallScenarios: FakeCallScenario[] = [
             { speaker: 'caller', text: 'Hey. Why haven’t you been answering?' },
             { speaker: 'user', text: 'Sorry, I’m out right now.' },
             { speaker: 'caller', text: 'Okay, where?' },
-            { speaker: 'user', text: 'Still near [location].' },
+            { speaker: 'user', text: 'Still near [describe your starting location].' },
             { speaker: 'caller', text: 'Alright. I need you to leave now.' },
             { speaker: 'user', text: 'Okay.' },
             {
@@ -171,7 +171,7 @@ export const fakeCallScenarios: FakeCallScenario[] = [
             },
             { speaker: 'user', text: 'Okay.' },
             { speaker: 'caller', text: 'Are you by yourself?' },
-            { speaker: 'user', text: 'Yeah, mostly, kind of.' },
+            { speaker: 'user', text: 'I’m going to meet someone.' },
             {
                 speaker: 'caller',
                 text: 'Alright. Head toward the main street. I’d rather you be somewhere visible.',
@@ -186,14 +186,14 @@ export const fakeCallScenarios: FakeCallScenario[] = [
                 speaker: 'caller',
                 text: 'Good. Are you going straight home, or do you want me to come get you?',
             },
-            { speaker: 'user', text: 'I can go home, come get me, I’m not sure.' },
+            { speaker: 'user', text: '[I can go home/come get me/I’m not sure]' },
             {
                 speaker: 'caller',
                 text: 'If you’re not sure, then stay where people are and I’ll come get you. Don’t stand off to the side somewhere by yourself.',
             },
             { speaker: 'user', text: 'Okay.' },
             { speaker: 'caller', text: 'Tell me what’s around you right now.' },
-            { speaker: 'user', text: '[Answers.]' },
+            { speaker: 'user', text: '[describe your current surroundings]' },
             {
                 speaker: 'caller',
                 text: 'Good. Stay there for a second. I’m putting my shoes on, grabbing my keys, heading out now.',

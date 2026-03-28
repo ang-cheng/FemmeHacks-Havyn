@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -14,13 +15,8 @@ import { InitialAvatar, SectionHeader, SelectionCard, StatusPill, SurfaceCard, T
 const VOICE_PREVIEW_PHRASE =
   "Hello! It's nice to meet you. How can I help you?";
 
-function formatScriptPreview(transcript: { speaker: string; text: string }[]): string {
-  return transcript
-    .map((line) => `${line.speaker === 'caller' ? 'Them' : 'You'}: ${line.text}`)
-    .join('\n\n');
-}
-
 export function PlanScreen() {
+  const router = useRouter();
   const {
     selectedScenarioId,
     setSelectedScenarioId,
@@ -128,15 +124,20 @@ export function PlanScreen() {
             ))}
           </View>
 
-          <View style={styles.previewCard}>
-            <View style={styles.previewHeader}>
-              <Text style={styles.previewLabel}>Script Preview</Text>
-              <Pressable accessibilityRole="button" style={styles.previewAction}>
-                <Text style={styles.previewActionText}>Edit</Text>
-              </Pressable>
+          <Pressable
+            accessibilityHint="Opens the full call script for the scenario you selected"
+            accessibilityRole="button"
+            onPress={() => router.push('/script-preview')}
+            style={({ pressed }) => [styles.scriptPreviewRow, pressed && styles.scriptPreviewRowPressed]}
+          >
+            <View style={styles.scriptPreviewTextBlock}>
+              <Text style={styles.scriptPreviewTitle}>Script preview</Text>
+              <Text numberOfLines={2} style={styles.scriptPreviewSubtitle}>
+                {selectedScenario.title} · {selectedScenario.transcript.length} lines
+              </Text>
             </View>
-            <Text style={styles.previewBody}>{formatScriptPreview(selectedScenario.transcript)}</Text>
-          </View>
+            <Feather color={HavynColors.textSoft} name="chevron-right" size={20} />
+          </Pressable>
         </SurfaceCard>
 
         <SurfaceCard style={styles.sectionCard}>
@@ -280,36 +281,35 @@ const styles = StyleSheet.create({
   cardStack: {
     gap: 12,
   },
-  previewCard: {
+  scriptPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     borderRadius: 22,
     backgroundColor: HavynColors.surfaceMuted,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    gap: 10,
+    borderWidth: 1,
+    borderColor: HavynColors.border,
   },
-  previewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  scriptPreviewRowPressed: {
+    opacity: 0.92,
+    backgroundColor: '#E8ECF4',
   },
-  previewLabel: {
-    color: HavynColors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
+  scriptPreviewTextBlock: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
   },
-  previewAction: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  previewActionText: {
-    color: HavynColors.accent,
-    fontSize: 13,
+  scriptPreviewTitle: {
+    color: HavynColors.text,
+    fontSize: 16,
     fontWeight: '700',
   },
-  previewBody: {
+  scriptPreviewSubtitle: {
     color: HavynColors.textMuted,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
   },
   playButton: {
     width: 40,
