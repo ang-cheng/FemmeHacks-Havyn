@@ -37,6 +37,7 @@ const initialEdgePadding = { top: 80, right: 64, bottom: 80, left: 64 };
 export function MapScreen() {
   const mapRef = useRef<MapView | null>(null);
   const locationWatcherRef = useRef<Location.LocationSubscription | null>(null);
+  const headingWatcherRef = useRef<Location.LocationSubscription | null>(null);
   const lastFrameKeyRef = useRef<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +48,7 @@ export function MapScreen() {
   const [permissionState, setPermissionState] = useState<'loading' | 'granted' | 'denied'>('loading');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [headingDegrees, setHeadingDegrees] = useState<number | null>(null);
 
   const origin = userLocation ?? getFallbackOrigin();
   const usingFallbackOrigin = permissionState !== 'granted' || userLocation == null;
@@ -103,6 +105,20 @@ export function MapScreen() {
             });
           }
         );
+
+        try {
+          headingWatcherRef.current = await Location.watchHeadingAsync((heading) => {
+            const nextHeading = Number.isFinite(heading.trueHeading) && heading.trueHeading >= 0
+              ? heading.trueHeading
+              : heading.magHeading;
+
+            if (Number.isFinite(nextHeading)) {
+              setHeadingDegrees(nextHeading);
+            }
+          });
+        } catch {
+          setHeadingDegrees(null);
+        }
       } catch {
         if (!mounted) {
           return;
@@ -110,6 +126,7 @@ export function MapScreen() {
 
         setPermissionState('denied');
         setLocationError('Using the Penn campus demo origin because live location is unavailable.');
+        setHeadingDegrees(null);
       }
     };
 
@@ -118,6 +135,7 @@ export function MapScreen() {
     return () => {
       mounted = false;
       locationWatcherRef.current?.remove();
+      headingWatcherRef.current?.remove();
     };
   }, []);
 
@@ -241,6 +259,20 @@ export function MapScreen() {
     setGuidancePlaceId((current) => (current === selectedPlace.id ? null : selectedPlace.id));
   }, [selectedPlace]);
 
+  const handleTopRecommendationPress = useCallback(() => {
+    if (guidePlace) {
+      setGuidancePlaceId(null);
+      return;
+    }
+
+    if (!recommendedPlace) {
+      return;
+    }
+
+    setSelectedPlaceId(recommendedPlace.id);
+    setGuidancePlaceId(recommendedPlace.id);
+  }, [guidePlace, recommendedPlace]);
+
   const handleRecenter = useCallback(() => {
     if (!mapRef.current) {
       return;
@@ -315,9 +347,20 @@ export function MapScreen() {
             style={StyleSheet.absoluteFill}
           >
             <Marker coordinate={origin} tracksViewChanges={false}>
-              <View style={styles.userMarkerOuter}>
-                <View style={styles.userMarkerInner} />
-              </View>
+              {headingDegrees != null ? (
+                <View style={styles.userArrowMarker}>
+                  <Feather
+                    color={HavynColors.info}
+                    name="navigation"
+                    size={18}
+                    style={{ transform: [{ rotate: `${headingDegrees}deg` }] }}
+                  />
+                </View>
+              ) : (
+                <View style={styles.userMarkerOuter}>
+                  <View style={styles.userMarkerInner} />
+                </View>
+              )}
             </Marker>
 
             {rankedPlaces.map((place) => {
@@ -366,16 +409,45 @@ export function MapScreen() {
           </MapView>
 
           <View style={styles.mapOverlayTop}>
-            <View style={styles.mapStatusBadge}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!recommendedPlace && !guidePlace}
+              onPress={handleTopRecommendationPress}
+              style={[styles.mapStatusBadge, guidePlace ? styles.mapStatusBadgeActive : null]}
+            >
               {permissionState === 'loading' ? (
                 <ActivityIndicator color={HavynColors.accent} size="small" />
               ) : (
-                <Feather color={HavynColors.accent} name="shield" size={15} />
+                <Feather
+                  color={guidePlace ? HavynColors.white : HavynColors.accent}
+                  name={guidePlace ? 'navigation' : 'shield'}
+                  size={15}
+                />
               )}
-              <Text style={styles.mapStatusText}>
-                {recommendedPlace ? `Top recommendation: ${recommendedPlace.name}` : 'No matches'}
-              </Text>
-            </View>
+              <View style={styles.mapStatusBody}>
+                <Text style={[styles.mapStatusText, guidePlace ? styles.mapStatusTextActive : null]}>
+                  {guidePlace
+                    ? `Guiding to ${guidePlace.name}`
+                    : recommendedPlace
+                      ? `Guide to ${recommendedPlace.name}`
+                      : 'No matches'}
+                </Text>
+                {guidePlace ? (
+                  <Text style={styles.mapStatusSubtextActive}>
+                    {guidePlace.distanceLabel} · {guidePlace.walkTimeLabel}
+                  </Text>
+                ) : recommendedPlace ? (
+                  <Text style={styles.mapStatusSubtext}>
+                    {recommendedPlace.whyRecommended}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={[styles.mapStatusAction, guidePlace ? styles.mapStatusActionActive : null]}>
+                <Text style={[styles.mapStatusActionText, guidePlace ? styles.mapStatusActionTextActive : null]}>
+                  {guidePlace ? 'End guidance' : 'Start route'}
+                </Text>
+              </View>
+            </Pressable>
           </View>
 
           <Pressable accessibilityRole="button" onPress={handleRecenter} style={styles.recenterButton}>
@@ -507,11 +579,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
+  mapStatusBadgeActive: {
+    backgroundColor: 'rgba(20, 27, 44, 0.92)',
+  },
+  mapStatusBody: {
+    flex: 1,
+    gap: 1,
+  },
   mapStatusText: {
     color: HavynColors.text,
     fontSize: 13,
     fontWeight: '700',
-    flex: 1,
+  },
+  mapStatusTextActive: {
+    color: HavynColors.white,
+  },
+  mapStatusSubtext: {
+    color: HavynColors.textMuted,
+    fontSize: 11,
+  },
+  mapStatusSubtextActive: {
+    color: 'rgba(255, 255, 255, 0.72)',
+    fontSize: 11,
+  },
+  mapStatusAction: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: HavynColors.accentSoft,
+  },
+  mapStatusActionActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+  },
+  mapStatusActionText: {
+    color: HavynColors.accentDeep,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  mapStatusActionTextActive: {
+    color: HavynColors.white,
   },
   recenterButton: {
     position: 'absolute',
@@ -539,6 +645,16 @@ const styles = StyleSheet.create({
     backgroundColor: HavynColors.info,
     borderWidth: 2,
     borderColor: HavynColors.white,
+  },
+  userArrowMarker: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderWidth: 2,
+    borderColor: HavynColors.info,
   },
   markerContainer: {
     alignItems: 'center',

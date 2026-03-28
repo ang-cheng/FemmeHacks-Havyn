@@ -1,8 +1,7 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,11 +13,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors } from '@/constants/havyn';
-import { scriptedPrompts } from '@/data/safety';
+import { useCall } from '@/context/call';
 
 type EmergencyCallOverlayProps = {
-  visible: boolean;
-  onSafe: () => void;
+  isMapVisible: boolean;
+  onExpandCall: () => void;
+  onMinimizeToMap: () => void;
 };
 
 const caller = {
@@ -27,26 +27,32 @@ const caller = {
   initial: 'S',
 };
 
-export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayProps) {
+export function EmergencyCallOverlay({
+  isMapVisible,
+  onExpandCall,
+  onMinimizeToMap,
+}: EmergencyCallOverlayProps) {
   const insets = useSafeAreaInsets();
-  const [countdown, setCountdown] = useState(3);
-  const [isCallActive, setIsCallActive] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
+  const {
+    callDuration,
+    callStage,
+    countdown,
+    currentPrompt,
+    endCall,
+    expandCall,
+    isCallMinimized,
+    minimizeCall,
+    nextPrompt,
+  } = useCall();
 
   const countdownPulse = useRef(new Animated.Value(0)).current;
   const avatarPulse = useRef(new Animated.Value(0)).current;
   const bars = useRef(Array.from({ length: 12 }, () => new Animated.Value(0.35))).current;
 
   useEffect(() => {
-    if (!visible) {
-      setCountdown(3);
-      setIsCallActive(false);
-      setCallDuration(0);
-      setCurrentPromptIndex(0);
+    if (callStage !== 'countdown') {
+      countdownPulse.stopAnimation();
       countdownPulse.setValue(0);
-      avatarPulse.setValue(0);
-      bars.forEach((bar) => bar.setValue(0.35));
       return;
     }
 
@@ -64,36 +70,15 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
       loop.stop();
       countdownPulse.setValue(0);
     };
-  }, [bars, countdownPulse, visible, avatarPulse]);
+  }, [callStage, countdownPulse]);
 
   useEffect(() => {
-    if (!visible || countdown <= 0) {
+    if (callStage !== 'active') {
+      avatarPulse.stopAnimation();
+      avatarPulse.setValue(0);
+      bars.forEach((bar) => bar.setValue(0.35));
       return;
     }
-
-    const timer = setTimeout(() => {
-      setCountdown((current) => current - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdown, visible]);
-
-  useEffect(() => {
-    if (!visible || countdown > 0) {
-      return;
-    }
-
-    setIsCallActive(true);
-  }, [countdown, visible]);
-
-  useEffect(() => {
-    if (!visible || !isCallActive) {
-      return;
-    }
-
-    const durationTimer = setInterval(() => {
-      setCallDuration((current) => current + 1);
-    }, 1000);
 
     const glowLoop = Animated.loop(
       Animated.sequence([
@@ -133,13 +118,12 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
     barLoops.forEach((loop) => loop.start());
 
     return () => {
-      clearInterval(durationTimer);
       glowLoop.stop();
       avatarPulse.setValue(0);
       barLoops.forEach((loop) => loop.stop());
       bars.forEach((bar) => bar.setValue(0.35));
     };
-  }, [avatarPulse, bars, isCallActive, visible]);
+  }, [avatarPulse, bars, callStage]);
 
   const countdownScale = countdownPulse.interpolate({
     inputRange: [0, 1],
@@ -161,24 +145,71 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
     outputRange: [0.28, 0.08],
   });
 
-  const prompt = useMemo(
-    () => scriptedPrompts[currentPromptIndex % scriptedPrompts.length],
-    [currentPromptIndex]
-  );
+  const durationLabel = useMemo(() => formatTime(callDuration), [callDuration]);
 
-  if (!visible) {
+  if (callStage === 'idle') {
     return null;
   }
 
+  if (callStage === 'active' && isCallMinimized) {
+    return (
+      <View pointerEvents="box-none" style={styles.minimizedLayer}>
+        <View
+          style={[
+            styles.minimizedWrap,
+            {
+              paddingTop: Math.max(insets.top, 14),
+            },
+          ]}
+        >
+          <View style={styles.minimizedCard}>
+            <View style={styles.minimizedTopRow}>
+              <View style={styles.minimizedBadge}>
+                <View style={styles.minimizedBadgeDot} />
+                <Text style={styles.minimizedBadgeText}>{durationLabel}</Text>
+              </View>
+              <View style={styles.minimizedActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    expandCall();
+                    onExpandCall();
+                  }}
+                  style={styles.iconButton}
+                >
+                  <Feather color={HavynColors.white} name="maximize-2" size={15} />
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={endCall} style={styles.iconButtonDanger}>
+                  <Feather color={HavynColors.white} name="phone-off" size={15} />
+                </Pressable>
+              </View>
+            </View>
+
+            <Text numberOfLines={3} style={styles.minimizedPromptText}>
+              {currentPrompt}
+            </Text>
+
+            <View style={styles.minimizedFooter}>
+              <Pressable accessibilityRole="button" onPress={nextPrompt} style={styles.minimizedNextButton}>
+                <Text style={styles.minimizedNextButtonText}>Next prompt</Text>
+                <Feather color={HavynColors.white} name="chevron-right" size={14} />
+              </Pressable>
+              {!isMapVisible ? (
+                <Pressable accessibilityRole="button" onPress={onMinimizeToMap} style={styles.minimizedMapButton}>
+                  <Feather color={HavynColors.white} name="map-pin" size={14} />
+                  <Text style={styles.minimizedMapButtonText}>Open map</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <Modal
-      animationType="fade"
-      onRequestClose={onSafe}
-      presentationStyle="fullScreen"
-      statusBarTranslucent
-      visible={visible}
-    >
-      {!isCallActive ? (
+    <View style={styles.fullscreenLayer}>
+      {callStage === 'countdown' ? (
         <LinearGradient
           colors={[HavynColors.accent, '#F86464', HavynColors.accentDark]}
           start={{ x: 0.2, y: 0 }}
@@ -231,14 +262,24 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
             ]}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.promptCard}>
-              <Text style={styles.promptLabel}>Say this</Text>
-              <Text style={styles.promptText}>{prompt}</Text>
+            <View style={styles.activeHeaderRow}>
+              <View style={styles.headerSpacer} />
               <Pressable
                 accessibilityRole="button"
-                onPress={() => setCurrentPromptIndex((current) => current + 1)}
-                style={styles.promptButton}
+                onPress={() => {
+                  minimizeCall();
+                  onMinimizeToMap();
+                }}
+                style={styles.minimizeButton}
               >
+                <Feather color={HavynColors.white} name="minimize-2" size={18} />
+              </Pressable>
+            </View>
+
+            <View style={styles.promptCard}>
+              <Text style={styles.promptLabel}>Say this</Text>
+              <Text style={styles.promptText}>{currentPrompt}</Text>
+              <Pressable accessibilityRole="button" onPress={nextPrompt} style={styles.promptButton}>
                 <Text style={styles.promptButtonText}>Next prompt</Text>
                 <Feather color={HavynColors.white} name="chevron-right" size={16} />
               </Pressable>
@@ -247,7 +288,7 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
             <View style={styles.callerMeta}>
               <Text style={styles.callerLabel}>{caller.label}</Text>
               <Text style={styles.callerName}>{caller.name}</Text>
-              <Text style={styles.callDuration}>{formatTime(callDuration)}</Text>
+              <Text style={styles.callDuration}>{durationLabel}</Text>
             </View>
 
             <View style={styles.avatarSection}>
@@ -296,7 +337,7 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
               </View>
 
               <View style={styles.footerButtons}>
-                <Pressable accessibilityRole="button" style={styles.endCallButton}>
+                <Pressable accessibilityRole="button" onPress={endCall} style={styles.endCallButton}>
                   <Feather
                     color={HavynColors.white}
                     name="phone"
@@ -304,7 +345,7 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
                     style={styles.endCallIcon}
                   />
                 </Pressable>
-                <Pressable accessibilityRole="button" onPress={onSafe} style={styles.safeButton}>
+                <Pressable accessibilityRole="button" onPress={endCall} style={styles.safeButton}>
                   <Text style={styles.safeButtonText}>I'm safe now</Text>
                 </Pressable>
               </View>
@@ -312,7 +353,7 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
           </ScrollView>
         </LinearGradient>
       )}
-    </Modal>
+    </View>
   );
 }
 
@@ -341,6 +382,117 @@ function formatTime(seconds: number) {
 }
 
 const styles = StyleSheet.create({
+  fullscreenLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+  },
+  minimizedLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+  },
+  minimizedWrap: {
+    paddingHorizontal: 18,
+  },
+  minimizedCard: {
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(19, 22, 34, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    shadowColor: HavynColors.black,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.24,
+    shadowRadius: 24,
+    elevation: 14,
+    gap: 12,
+  },
+  minimizedTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  minimizedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  minimizedBadgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#4FD18A',
+  },
+  minimizedBadgeText: {
+    color: HavynColors.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  minimizedActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  iconButtonDanger: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(226, 84, 84, 0.86)',
+  },
+  minimizedPromptText: {
+    color: HavynColors.white,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  minimizedFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  minimizedNextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: HavynColors.accent,
+  },
+  minimizedNextButtonText: {
+    color: HavynColors.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  minimizedMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  minimizedMapButtonText: {
+    color: HavynColors.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   countdownScreen: {
     flex: 1,
     alignItems: 'center',
@@ -408,6 +560,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     justifyContent: 'space-between',
     gap: 24,
+  },
+  activeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerSpacer: {
+    width: 42,
+    height: 42,
+  },
+  minimizeButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   promptCard: {
     borderRadius: 28,
