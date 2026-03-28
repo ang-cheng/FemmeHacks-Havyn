@@ -281,25 +281,12 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
         ? 'Call minimized over the map'
         : 'Call already in progress';
 
-  const bodyText =
-    callStage === 'idle'
-      ? 'Your contacts and nearby helpers will be alerted if you need a discreet exit.'
-      : isCallMinimized
-        ? 'The fake transcript and TTS keep running while you browse nearby safe places underneath.'
-        : 'Use the minimize control in the fake call to navigate on the map without ending it.';
-
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.infoBadge}>
-        <Feather color={HavynColors.accent} name="shield" size={16} />
-        <Text style={styles.infoBadgeText}>
-          {callStage === 'idle' ? 'Ready to assist you' : 'Fake call is running'}
-        </Text>
-      </View>
 
       <View style={styles.centerStack}>
         <View style={styles.callButtonWrap}>
@@ -372,7 +359,6 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
 
         <View style={styles.instructions}>
           <Text style={styles.instructionsTitle}>{titleText}</Text>
-          <Text style={styles.instructionsBody}>{bodyText}</Text>
         </View>
       </View>
 
@@ -380,11 +366,6 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
         <View style={styles.bottomCardDot} />
         <View style={styles.bottomCardBody}>
           <Text style={styles.bottomCardTitle}>Emergency mode</Text>
-          <Text style={styles.bottomCardText}>
-            {callStage === 'idle'
-              ? 'Launches a believable call screen so you can leave an unsafe situation without drawing attention.'
-              : 'When minimized, the fake call floats above the map so you can keep navigating without ending it.'}
-          </Text>
           <Text style={styles.planDetailText}>Scenario: {selectedScenario.title}</Text>
           <Text style={styles.planDetailText}>Voice: {selectedVoiceLabel}</Text>
         </View>
