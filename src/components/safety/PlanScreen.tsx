@@ -196,7 +196,6 @@ export function PlanScreen() {
        <View style={{ paddingTop: 50 }}>
         <SectionHeader
         title="Safety Plan"
-        subtitle="Customize your emergency settings and default support flow."
         />
        </View>
 
@@ -323,11 +322,6 @@ export function PlanScreen() {
               <Feather color={HavynColors.white} name="plus" size={22} />
             </Pressable>
           </View>
-
-          <Text style={styles.contactsExplainer}>
-            When you activate a fake safety call, these people can be alerted by text message so someone
-            knows you may need support.
-          </Text>
 
           {contacts.length === 0 ? (
             <Text style={styles.contactsEmpty}>No contacts yet. Add someone you trust.</Text>
