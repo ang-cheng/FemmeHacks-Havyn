@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,9 +20,8 @@ import { HavynColors } from '@/constants/havyn';
 import { useSafetyPlan } from '@/context/SafetyPlanContext';
 import { type Contact, emergencyContacts as defaultEmergencyContacts, voiceOptions } from '@/data/safety';
 import { fetchTtsBase64 } from '@/lib/tts';
-import { fakeCallScenarios } from '../../../scenarios/fakeCallScenarios';
 
-import { InitialAvatar, SectionHeader, SelectionCard, SurfaceCard, ToggleSwitch } from './common';
+import { InitialAvatar, SectionHeader, SelectionCard, StatusPill, SurfaceCard, ToggleSwitch } from './common';
 
 const VOICE_PREVIEW_PHRASE =
   "Hello! It's nice to meet you. How can I help you?";
@@ -41,11 +41,14 @@ function initialsFromName(name: string): string {
 export function PlanScreen() {
   const router = useRouter();
   const {
+    scenarios,
     selectedScenarioId,
     setSelectedScenarioId,
     selectedVoiceId,
     setSelectedVoiceId,
     selectedScenario,
+    duplicateScenario,
+    deleteCustomScenario,
   } = useSafetyPlan();
   const [sendTextEnabled, setSendTextEnabled] = useState(true);
   const [shareLocationEnabled, setShareLocationEnabled] = useState(true);
@@ -157,6 +160,33 @@ export function PlanScreen() {
     setContacts((prev) => prev.filter((c) => c.id !== id));
   };
 
+  const openCreateScenario = () => {
+    router.push({
+      pathname: '/script-preview',
+      params: { mode: 'create' },
+    });
+  };
+
+  const confirmDeleteScenario = useCallback(
+    (scenarioId: string, title: string) => {
+      Alert.alert(
+        'Delete custom scenario?',
+        `"${title}" will be removed from this device.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              void deleteCustomScenario(scenarioId);
+            },
+          },
+        ]
+      );
+    },
+    [deleteCustomScenario]
+  );
+
   return (
     <ScrollView
       style={styles.screen}
@@ -174,16 +204,53 @@ export function PlanScreen() {
         <SurfaceCard style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Call Scenario</Text>
           <View style={styles.cardStack}>
-            {fakeCallScenarios.map((scenario) => (
+            {scenarios.map((scenario) => (
               <SelectionCard
                 key={scenario.id}
                 title={scenario.title}
                 description={scenario.description}
                 selected={scenario.id === selectedScenarioId}
                 onPress={() => setSelectedScenarioId(scenario.id)}
+                rightAccessory={
+                  scenario.source === 'custom' ? (
+                    <View style={styles.customScenarioActions}>
+                      <StatusPill label="Custom" tone="accent" />
+                      <View style={styles.customScenarioButtons}>
+                        <Pressable
+                          accessibilityLabel={`Duplicate ${scenario.title}`}
+                          accessibilityRole="button"
+                          hitSlop={6}
+                          onPress={() => void duplicateScenario(scenario.id)}
+                          style={styles.customScenarioIconButton}
+                        >
+                          <Feather color={HavynColors.textMuted} name="copy" size={16} />
+                        </Pressable>
+                        <Pressable
+                          accessibilityLabel={`Delete ${scenario.title}`}
+                          accessibilityRole="button"
+                          hitSlop={6}
+                          onPress={() => confirmDeleteScenario(scenario.id, scenario.title)}
+                          style={[styles.customScenarioIconButton, styles.customScenarioDeleteButton]}
+                        >
+                          <Feather color={HavynColors.accentDeep} name="trash-2" size={16} />
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : null
+                }
               />
             ))}
           </View>
+
+          <Pressable
+            accessibilityHint="Creates a custom call scenario you can save and select later"
+            accessibilityRole="button"
+            onPress={openCreateScenario}
+            style={({ pressed }) => [styles.createScenarioButton, pressed && styles.createScenarioButtonPressed]}
+          >
+            <Feather color={HavynColors.accent} name="plus" size={18} />
+            <Text style={styles.createScenarioButtonText}>Create New Scenario</Text>
+          </Pressable>
 
           <Pressable
             accessibilityHint="Opens the full call script for the scenario you selected"
@@ -428,6 +495,26 @@ const styles = StyleSheet.create({
   cardStack: {
     gap: 12,
   },
+  createScenarioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: HavynColors.border,
+    backgroundColor: HavynColors.surfaceMuted,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  createScenarioButtonPressed: {
+    opacity: 0.92,
+  },
+  createScenarioButtonText: {
+    color: HavynColors.accentDeep,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   scriptPreviewRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -465,6 +552,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: HavynColors.surfaceMuted,
+  },
+  customScenarioActions: {
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  customScenarioButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  customScenarioIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavynColors.surfaceMuted,
+  },
+  customScenarioDeleteButton: {
+    backgroundColor: '#FFECEC',
   },
   inlineHeader: {
     flexDirection: 'row',
