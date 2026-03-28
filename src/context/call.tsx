@@ -1,20 +1,15 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-import { scriptedPrompts } from '@/data/safety';
-
 type CallStage = 'idle' | 'countdown' | 'active';
 
 type CallContextValue = {
   callStage: CallStage;
   countdown: number;
   callDuration: number;
-  currentPrompt: string;
-  currentPromptIndex: number;
   isCallActive: boolean;
   isCallMinimized: boolean;
   startCall: () => void;
   endCall: () => void;
-  nextPrompt: () => void;
   minimizeCall: () => void;
   expandCall: () => void;
 };
@@ -25,7 +20,6 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [callStage, setCallStage] = useState<CallStage>('idle');
   const [countdown, setCountdown] = useState(3);
   const [callDuration, setCallDuration] = useState(0);
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [isCallMinimized, setIsCallMinimized] = useState(false);
 
   useEffect(() => {
@@ -62,8 +56,6 @@ export function CallProvider({ children }: { children: ReactNode }) {
       callStage,
       countdown,
       callDuration,
-      currentPrompt: scriptedPrompts[currentPromptIndex % scriptedPrompts.length],
-      currentPromptIndex,
       isCallActive: callStage !== 'idle',
       isCallMinimized,
       startCall: () => {
@@ -75,18 +67,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
         setCallStage('countdown');
         setCountdown(3);
         setCallDuration(0);
-        setCurrentPromptIndex(0);
         setIsCallMinimized(false);
       },
       endCall: () => {
         setCallStage('idle');
         setCountdown(3);
         setCallDuration(0);
-        setCurrentPromptIndex(0);
         setIsCallMinimized(false);
-      },
-      nextPrompt: () => {
-        setCurrentPromptIndex((current) => current + 1);
       },
       minimizeCall: () => {
         if (callStage === 'active') {
@@ -99,7 +86,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [callDuration, callStage, countdown, currentPromptIndex, isCallMinimized]
+    [callDuration, callStage, countdown, isCallMinimized]
   );
 
   return <CallContext.Provider value={value}>{children}</CallContext.Provider>;

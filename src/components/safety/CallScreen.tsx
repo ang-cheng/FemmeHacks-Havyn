@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -13,6 +13,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors, HavynShadow } from '@/constants/havyn';
+import { voiceOptions } from '@/data/safety';
+import { useSafetyPlan } from '@/context/SafetyPlanContext';
 import { useCall } from '@/context/call';
 
 type CallScreenProps = {
@@ -20,11 +22,17 @@ type CallScreenProps = {
 };
 
 export function CallScreen({ onOpenMap }: CallScreenProps) {
+  const { selectedScenario, selectedVoiceId } = useSafetyPlan();
   const [tapCount, setTapCount] = useState(0);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulseOne = useRef(new Animated.Value(0)).current;
   const pulseTwo = useRef(new Animated.Value(0)).current;
   const { callStage, expandCall, isCallMinimized, startCall } = useCall();
+
+  const selectedVoiceLabel = useMemo(
+    () => voiceOptions.find((voice) => voice.id === selectedVoiceId)?.name ?? 'Configured voice',
+    [selectedVoiceId]
+  );
 
   useEffect(() => {
     if (tapCount === 0 || callStage !== 'idle') {
@@ -118,7 +126,7 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
     callStage === 'idle'
       ? 'Your contacts and nearby helpers will be alerted if you need a discreet exit.'
       : isCallMinimized
-        ? 'The fake transcript keeps running while you browse nearby safe places underneath.'
+        ? 'The fake transcript and TTS keep running while you browse nearby safe places underneath.'
         : 'Use the minimize control in the fake call to navigate on the map without ending it.';
 
   return (
@@ -218,6 +226,8 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
               ? 'Launches a believable call screen so you can leave an unsafe situation without drawing attention.'
               : 'When minimized, the fake call floats above the map so you can keep navigating without ending it.'}
           </Text>
+          <Text style={styles.planDetailText}>Scenario: {selectedScenario.title}</Text>
+          <Text style={styles.planDetailText}>Voice: {selectedVoiceLabel}</Text>
         </View>
       </View>
 
@@ -364,6 +374,11 @@ const styles = StyleSheet.create({
     color: HavynColors.textMuted,
     fontSize: 14,
     lineHeight: 22,
+  },
+  planDetailText: {
+    color: HavynColors.accentDeep,
+    fontSize: 13,
+    fontWeight: '600',
   },
   quickMapButton: {
     alignSelf: 'center',

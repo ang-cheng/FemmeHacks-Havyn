@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef } from 'react';
+import { Audio } from 'expo-av';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -13,7 +14,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors } from '@/constants/havyn';
+import { useSafetyPlan } from '@/context/SafetyPlanContext';
 import { useCall } from '@/context/call';
+import { fetchTtsBase64 } from '@/lib/tts';
 
 type EmergencyCallOverlayProps = {
   isMapVisible: boolean;
@@ -33,21 +36,117 @@ export function EmergencyCallOverlay({
   onMinimizeToMap,
 }: EmergencyCallOverlayProps) {
   const insets = useSafeAreaInsets();
+  const { selectedScenario, selectedVoiceId } = useSafetyPlan();
   const {
     callDuration,
     callStage,
     countdown,
-    currentPrompt,
     endCall,
     expandCall,
     isCallMinimized,
     minimizeCall,
-    nextPrompt,
   } = useCall();
 
+  const transcript = selectedScenario.transcript;
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const cancelledRef = useRef(false);
   const countdownPulse = useRef(new Animated.Value(0)).current;
   const avatarPulse = useRef(new Animated.Value(0)).current;
   const bars = useRef(Array.from({ length: 12 }, () => new Animated.Value(0.35))).current;
+
+  const [userLineIndex, setUserLineIndex] = useState<number | null>(null);
+  const [isPlayingCaller, setIsPlayingCaller] = useState(false);
+  const [scriptFinished, setScriptFinished] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
+
+  const unloadSound = useCallback(async () => {
+    if (soundRef.current) {
+      try {
+        await soundRef.current.unloadAsync();
+      } catch {
+        /* ignore */
+      }
+      soundRef.current = null;
+    }
+  }, []);
+
+  const playCallerLine = useCallback(
+    async (text: string) => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        allowsRecordingIOS: false,
+      });
+
+      const base64 = await fetchTtsBase64(text, selectedVoiceId);
+      const uri = `data:audio/mpeg;base64,${base64}`;
+
+      await unloadSound();
+
+      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+      soundRef.current = sound;
+
+      await new Promise<void>((resolve, reject) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (!status.isLoaded) {
+            if (status.error) {
+              reject(new Error(status.error));
+            }
+            return;
+          }
+
+          if (status.didJustFinish) {
+            resolve();
+          }
+        });
+      });
+    },
+    [selectedVoiceId, unloadSound]
+  );
+
+  const playCallerLinesFrom = useCallback(
+    async (startIndex: number) => {
+      let nextIndex = startIndex;
+
+      while (nextIndex < transcript.length && transcript[nextIndex].speaker === 'caller') {
+        if (cancelledRef.current) {
+          return;
+        }
+
+        await playCallerLine(transcript[nextIndex].text);
+        nextIndex += 1;
+      }
+
+      if (cancelledRef.current) {
+        return;
+      }
+
+      if (nextIndex < transcript.length && transcript[nextIndex].speaker === 'user') {
+        setUserLineIndex(nextIndex);
+        setScriptFinished(false);
+      } else {
+        setUserLineIndex(null);
+        setScriptFinished(true);
+      }
+    },
+    [playCallerLine, transcript]
+  );
+
+  useEffect(() => {
+    if (callStage === 'idle') {
+      cancelledRef.current = true;
+      void unloadSound();
+      setUserLineIndex(null);
+      setIsPlayingCaller(false);
+      setScriptFinished(false);
+      setTtsError(null);
+      countdownPulse.setValue(0);
+      avatarPulse.setValue(0);
+      bars.forEach((bar) => bar.setValue(0.35));
+      return;
+    }
+
+    cancelledRef.current = false;
+  }, [avatarPulse, bars, callStage, countdownPulse, unloadSound]);
 
   useEffect(() => {
     if (callStage !== 'countdown') {
@@ -71,6 +170,40 @@ export function EmergencyCallOverlay({
       countdownPulse.setValue(0);
     };
   }, [callStage, countdownPulse]);
+
+  useEffect(() => {
+    if (callStage !== 'active') {
+      return;
+    }
+
+    cancelledRef.current = false;
+
+    const runInitial = async () => {
+      setTtsError(null);
+      setUserLineIndex(null);
+      setScriptFinished(false);
+      setIsPlayingCaller(true);
+
+      try {
+        await playCallerLinesFrom(0);
+      } catch (error) {
+        if (!cancelledRef.current) {
+          setTtsError(error instanceof Error ? error.message : 'Could not play audio');
+        }
+      } finally {
+        if (!cancelledRef.current) {
+          setIsPlayingCaller(false);
+        }
+      }
+    };
+
+    void runInitial();
+
+    return () => {
+      cancelledRef.current = true;
+      void unloadSound();
+    };
+  }, [callStage, playCallerLinesFrom, selectedScenario.id, unloadSound]);
 
   useEffect(() => {
     if (callStage !== 'active') {
@@ -125,6 +258,32 @@ export function EmergencyCallOverlay({
     };
   }, [avatarPulse, bars, callStage]);
 
+  const handleNextPrompt = useCallback(async () => {
+    if (isPlayingCaller || scriptFinished) {
+      return;
+    }
+
+    const startFrom = userLineIndex === null ? 0 : userLineIndex + 1;
+
+    setTtsError(null);
+    cancelledRef.current = false;
+    setIsPlayingCaller(true);
+
+    try {
+      await playCallerLinesFrom(startFrom);
+    } catch (error) {
+      if (!cancelledRef.current) {
+        setTtsError(error instanceof Error ? error.message : 'Could not play audio');
+      }
+    } finally {
+      if (!cancelledRef.current) {
+        setIsPlayingCaller(false);
+      }
+    }
+  }, [isPlayingCaller, playCallerLinesFrom, scriptFinished, userLineIndex]);
+
+  const durationLabel = useMemo(() => formatTime(callDuration), [callDuration]);
+
   const countdownScale = countdownPulse.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.9],
@@ -145,7 +304,17 @@ export function EmergencyCallOverlay({
     outputRange: [0.28, 0.08],
   });
 
-  const durationLabel = useMemo(() => formatTime(callDuration), [callDuration]);
+  const userPromptText = userLineIndex !== null ? transcript[userLineIndex]?.text ?? '' : '';
+  const nextDisabled = isPlayingCaller || scriptFinished || (userLineIndex === null && !ttsError);
+
+  const promptLabel = scriptFinished ? 'Script' : isPlayingCaller ? 'Call' : 'Say this';
+  const promptText = ttsError
+    ? ttsError
+    : scriptFinished
+      ? 'You reached the end of this script. Stay on the line as long as you need.'
+      : isPlayingCaller
+        ? 'Listening to caller…'
+        : userPromptText;
 
   if (callStage === 'idle') {
     return null;
@@ -186,13 +355,29 @@ export function EmergencyCallOverlay({
             </View>
 
             <Text numberOfLines={3} style={styles.minimizedPromptText}>
-              {currentPrompt}
+              {promptText}
             </Text>
 
             <View style={styles.minimizedFooter}>
-              <Pressable accessibilityRole="button" onPress={nextPrompt} style={styles.minimizedNextButton}>
-                <Text style={styles.minimizedNextButtonText}>Next prompt</Text>
-                <Feather color={HavynColors.white} name="chevron-right" size={14} />
+              <Pressable
+                accessibilityRole="button"
+                disabled={nextDisabled}
+                onPress={() => void handleNextPrompt()}
+                style={[styles.minimizedNextButton, nextDisabled && styles.promptButtonDisabled]}
+              >
+                <Text
+                  style={[
+                    styles.minimizedNextButtonText,
+                    nextDisabled && styles.promptButtonTextDisabled,
+                  ]}
+                >
+                  Next prompt
+                </Text>
+                <Feather
+                  color={nextDisabled ? 'rgba(255,255,255,0.4)' : HavynColors.white}
+                  name="chevron-right"
+                  size={14}
+                />
               </Pressable>
               {!isMapVisible ? (
                 <Pressable accessibilityRole="button" onPress={onMinimizeToMap} style={styles.minimizedMapButton}>
@@ -277,11 +462,27 @@ export function EmergencyCallOverlay({
             </View>
 
             <View style={styles.promptCard}>
-              <Text style={styles.promptLabel}>Say this</Text>
-              <Text style={styles.promptText}>{currentPrompt}</Text>
-              <Pressable accessibilityRole="button" onPress={nextPrompt} style={styles.promptButton}>
-                <Text style={styles.promptButtonText}>Next prompt</Text>
-                <Feather color={HavynColors.white} name="chevron-right" size={16} />
+              <Text style={styles.promptLabel}>{promptLabel}</Text>
+              <Text style={styles.promptText}>{promptText}</Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={nextDisabled}
+                onPress={() => void handleNextPrompt()}
+                style={[styles.promptButton, nextDisabled && styles.promptButtonDisabled]}
+              >
+                <Text
+                  style={[
+                    styles.promptButtonText,
+                    nextDisabled && styles.promptButtonTextDisabled,
+                  ]}
+                >
+                  Next prompt
+                </Text>
+                <Feather
+                  color={nextDisabled ? 'rgba(255,255,255,0.4)' : HavynColors.white}
+                  name="chevron-right"
+                  size={16}
+                />
               </Pressable>
             </View>
 
@@ -605,10 +806,16 @@ const styles = StyleSheet.create({
     gap: 6,
     alignSelf: 'flex-start',
   },
+  promptButtonDisabled: {
+    opacity: 0.55,
+  },
   promptButtonText: {
     color: HavynColors.white,
     fontSize: 14,
     fontWeight: '700',
+  },
+  promptButtonTextDisabled: {
+    color: 'rgba(255, 255, 255, 0.55)',
   },
   callerMeta: {
     alignItems: 'center',
