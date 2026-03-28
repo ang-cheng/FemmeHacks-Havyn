@@ -3,20 +3,30 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { HavynColors } from '@/constants/havyn';
-import { emergencyContacts, scenarioOptions, voiceOptions } from '@/data/safety';
+import { useSafetyPlan } from '@/context/SafetyPlanContext';
+import { emergencyContacts, voiceOptions } from '@/data/safety';
+import { fakeCallScenarios } from '../../../scenarios/fakeCallScenarios';
 
 import { InitialAvatar, SectionHeader, SelectionCard, StatusPill, SurfaceCard, ToggleSwitch } from './common';
 
+function formatScriptPreview(transcript: { speaker: string; text: string }[]): string {
+  return transcript
+    .map((line) => `${line.speaker === 'caller' ? 'Them' : 'You'}: ${line.text}`)
+    .join('\n\n');
+}
+
 export function PlanScreen() {
-  const [selectedScenarioId, setSelectedScenarioId] = useState(scenarioOptions[0]?.id ?? 'friend');
-  const [selectedVoiceId, setSelectedVoiceId] = useState(voiceOptions[0]?.id ?? 'calm-female');
+  const {
+    selectedScenarioId,
+    setSelectedScenarioId,
+    selectedVoiceId,
+    setSelectedVoiceId,
+    selectedScenario,
+  } = useSafetyPlan();
   const [sendTextEnabled, setSendTextEnabled] = useState(true);
   const [shareLocationEnabled, setShareLocationEnabled] = useState(true);
   const [checkInEnabled, setCheckInEnabled] = useState(true);
   const [checkInMinutes, setCheckInMinutes] = useState(10);
-
-  const selectedScenario =
-    scenarioOptions.find((scenario) => scenario.id === selectedScenarioId) ?? scenarioOptions[0];
 
   return (
     <ScrollView
@@ -33,7 +43,7 @@ export function PlanScreen() {
         <SurfaceCard style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Call Scenario</Text>
           <View style={styles.cardStack}>
-            {scenarioOptions.map((scenario) => (
+            {fakeCallScenarios.map((scenario) => (
               <SelectionCard
                 key={scenario.id}
                 title={scenario.title}
@@ -51,7 +61,7 @@ export function PlanScreen() {
                 <Text style={styles.previewActionText}>Edit</Text>
               </Pressable>
             </View>
-            <Text style={styles.previewBody}>{selectedScenario.script}</Text>
+            <Text style={styles.previewBody}>{formatScriptPreview(selectedScenario.transcript)}</Text>
           </View>
         </SurfaceCard>
 

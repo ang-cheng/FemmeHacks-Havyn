@@ -13,10 +13,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors, HavynShadow } from '@/constants/havyn';
+import { useSafetyPlan } from '@/context/SafetyPlanContext';
 
 import { EmergencyCallOverlay } from './EmergencyCallOverlay';
 
 export function CallScreen() {
+  const { selectedScenario, selectedVoiceId } = useSafetyPlan();
   const [tapCount, setTapCount] = useState(0);
   const [isActivated, setIsActivated] = useState(false);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,7 +202,12 @@ export function CallScreen() {
         </View>
       </ScrollView>
 
-      <EmergencyCallOverlay onSafe={handleSafe} visible={isActivated} />
+      <EmergencyCallOverlay
+        onSafe={handleSafe}
+        transcript={selectedScenario.transcript}
+        voiceId={selectedVoiceId}
+        visible={isActivated}
+      />
     </>
   );
 }

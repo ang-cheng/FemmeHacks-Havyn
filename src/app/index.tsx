@@ -9,22 +9,25 @@ import { BottomTabBar } from '@/components/safety/BottomTabBar';
 import { CallScreen } from '@/components/safety/CallScreen';
 import { MapScreen } from '@/components/safety/MapScreen';
 import { PlanScreen } from '@/components/safety/PlanScreen';
+import { SafetyPlanProvider } from '@/context/SafetyPlanContext';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<SafetyTab>('call');
 
   return (
-    <View style={styles.screen}>
-      <StatusBar style="dark" />
-      <View style={styles.phoneFrame}>
-        <View style={styles.content}>
-          {activeTab === 'plan' ? <PlanScreen /> : null}
-          {activeTab === 'call' ? <CallScreen /> : null}
-          {activeTab === 'map' ? <MapScreen /> : null}
+    <SafetyPlanProvider>
+      <View style={styles.screen}>
+        <StatusBar style="dark" />
+        <View style={styles.phoneFrame}>
+          <View style={styles.content}>
+            {activeTab === 'plan' ? <PlanScreen /> : null}
+            {activeTab === 'call' ? <CallScreen /> : null}
+            {activeTab === 'map' ? <MapScreen /> : null}
+          </View>
+          <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
         </View>
-        <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
       </View>
-    </View>
+    </SafetyPlanProvider>
   );
 }
 

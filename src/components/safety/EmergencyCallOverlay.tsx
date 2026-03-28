@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Audio } from 'expo-av';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -14,11 +15,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors } from '@/constants/havyn';
-import { scriptedPrompts } from '@/data/safety';
+import { fetchTtsBase64 } from '@/lib/tts';
+
+import type { TranscriptLine } from '../../../scenarios/types';
 
 type EmergencyCallOverlayProps = {
   visible: boolean;
   onSafe: () => void;
+  transcript: TranscriptLine[];
+  voiceId: string;
 };
 
 const caller = {
@@ -27,23 +32,106 @@ const caller = {
   initial: 'S',
 };
 
-export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayProps) {
+export function EmergencyCallOverlay({
+  visible,
+  onSafe,
+  transcript,
+  voiceId,
+}: EmergencyCallOverlayProps) {
   const insets = useSafeAreaInsets();
   const [countdown, setCountdown] = useState(3);
   const [isCallActive, setIsCallActive] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
+  const [userLineIndex, setUserLineIndex] = useState<number | null>(null);
+  const [isPlayingCaller, setIsPlayingCaller] = useState(false);
+  const [scriptFinished, setScriptFinished] = useState(false);
+  const [ttsError, setTtsError] = useState<string | null>(null);
+
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const cancelledRef = useRef(false);
 
   const countdownPulse = useRef(new Animated.Value(0)).current;
   const avatarPulse = useRef(new Animated.Value(0)).current;
   const bars = useRef(Array.from({ length: 12 }, () => new Animated.Value(0.35))).current;
+
+  const unloadSound = useCallback(async () => {
+    if (soundRef.current) {
+      try {
+        await soundRef.current.unloadAsync();
+      } catch {
+        /* ignore */
+      }
+      soundRef.current = null;
+    }
+  }, []);
+
+  const playCallerLine = useCallback(
+    async (text: string) => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        allowsRecordingIOS: false,
+      });
+
+      const base64 = await fetchTtsBase64(text, voiceId);
+      const uri = `data:audio/mpeg;base64,${base64}`;
+
+      await unloadSound();
+
+      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+      soundRef.current = sound;
+
+      await new Promise<void>((resolve, reject) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (!status.isLoaded) {
+            if (status.error) {
+              reject(new Error(status.error));
+            }
+            return;
+          }
+          if (status.didJustFinish) {
+            resolve();
+          }
+        });
+      });
+    },
+    [unloadSound, voiceId]
+  );
+
+  const playCallerLinesFrom = useCallback(
+    async (startIndex: number) => {
+      let i = startIndex;
+      while (i < transcript.length && transcript[i].speaker === 'caller') {
+        if (cancelledRef.current) {
+          return;
+        }
+        await playCallerLine(transcript[i].text);
+        i += 1;
+      }
+      if (cancelledRef.current) {
+        return;
+      }
+      if (i < transcript.length && transcript[i].speaker === 'user') {
+        setUserLineIndex(i);
+        setScriptFinished(false);
+      } else {
+        setUserLineIndex(null);
+        setScriptFinished(true);
+      }
+    },
+    [playCallerLine, transcript]
+  );
 
   useEffect(() => {
     if (!visible) {
       setCountdown(3);
       setIsCallActive(false);
       setCallDuration(0);
-      setCurrentPromptIndex(0);
+      setUserLineIndex(null);
+      setIsPlayingCaller(false);
+      setScriptFinished(false);
+      setTtsError(null);
+      cancelledRef.current = true;
+      void unloadSound();
       countdownPulse.setValue(0);
       avatarPulse.setValue(0);
       bars.forEach((bar) => bar.setValue(0.35));
@@ -64,7 +152,7 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
       loop.stop();
       countdownPulse.setValue(0);
     };
-  }, [bars, countdownPulse, visible, avatarPulse]);
+  }, [bars, countdownPulse, visible, avatarPulse, unloadSound]);
 
   useEffect(() => {
     if (!visible || countdown <= 0) {
@@ -85,6 +173,39 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
 
     setIsCallActive(true);
   }, [countdown, visible]);
+
+  useEffect(() => {
+    if (!visible || !isCallActive) {
+      return;
+    }
+
+    cancelledRef.current = false;
+
+    const runInitial = async () => {
+      setTtsError(null);
+      setIsPlayingCaller(true);
+      setUserLineIndex(null);
+      setScriptFinished(false);
+      try {
+        await playCallerLinesFrom(0);
+      } catch (e) {
+        if (!cancelledRef.current) {
+          setTtsError(e instanceof Error ? e.message : 'Could not play audio');
+        }
+      } finally {
+        if (!cancelledRef.current) {
+          setIsPlayingCaller(false);
+        }
+      }
+    };
+
+    void runInitial();
+
+    return () => {
+      cancelledRef.current = true;
+      void unloadSound();
+    };
+  }, [visible, isCallActive, playCallerLinesFrom, unloadSound]);
 
   useEffect(() => {
     if (!visible || !isCallActive) {
@@ -141,6 +262,30 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
     };
   }, [avatarPulse, bars, isCallActive, visible]);
 
+  const handleNextPrompt = async () => {
+    if (isPlayingCaller || scriptFinished) {
+      return;
+    }
+
+    const startFrom = userLineIndex === null ? 0 : userLineIndex + 1;
+
+    setTtsError(null);
+    cancelledRef.current = false;
+    setIsPlayingCaller(true);
+
+    try {
+      await playCallerLinesFrom(startFrom);
+    } catch (e) {
+      if (!cancelledRef.current) {
+        setTtsError(e instanceof Error ? e.message : 'Could not play audio');
+      }
+    } finally {
+      if (!cancelledRef.current) {
+        setIsPlayingCaller(false);
+      }
+    }
+  };
+
   const countdownScale = countdownPulse.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.9],
@@ -161,10 +306,13 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
     outputRange: [0.28, 0.08],
   });
 
-  const prompt = useMemo(
-    () => scriptedPrompts[currentPromptIndex % scriptedPrompts.length],
-    [currentPromptIndex]
-  );
+  const userPromptText =
+    userLineIndex !== null ? transcript[userLineIndex]?.text ?? '' : '';
+
+  const nextDisabled =
+    isPlayingCaller ||
+    scriptFinished ||
+    (userLineIndex === null && !ttsError);
 
   if (!visible) {
     return null;
@@ -232,15 +380,36 @@ export function EmergencyCallOverlay({ visible, onSafe }: EmergencyCallOverlayPr
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.promptCard}>
-              <Text style={styles.promptLabel}>Say this</Text>
-              <Text style={styles.promptText}>{prompt}</Text>
+              <Text style={styles.promptLabel}>
+                {scriptFinished ? 'Script' : isPlayingCaller ? 'Call' : 'Say this'}
+              </Text>
+              {ttsError ? (
+                <Text style={styles.promptText}>{ttsError}</Text>
+              ) : scriptFinished ? (
+                <Text style={styles.promptText}>
+                  You reached the end of this script. Stay on the line as long as you need.
+                </Text>
+              ) : isPlayingCaller ? (
+                <Text style={styles.promptText}>Listening to caller…</Text>
+              ) : (
+                <Text style={styles.promptText}>{userPromptText}</Text>
+              )}
               <Pressable
                 accessibilityRole="button"
-                onPress={() => setCurrentPromptIndex((current) => current + 1)}
-                style={styles.promptButton}
+                disabled={nextDisabled}
+                onPress={() => void handleNextPrompt()}
+                style={[styles.promptButton, nextDisabled && styles.promptButtonDisabled]}
               >
-                <Text style={styles.promptButtonText}>Next prompt</Text>
-                <Feather color={HavynColors.white} name="chevron-right" size={16} />
+                <Text
+                  style={[styles.promptButtonText, nextDisabled && styles.promptButtonTextDisabled]}
+                >
+                  Next prompt
+                </Text>
+                <Feather
+                  color={nextDisabled ? 'rgba(255,255,255,0.4)' : HavynColors.white}
+                  name="chevron-right"
+                  size={16}
+                />
               </Pressable>
             </View>
 
@@ -436,10 +605,16 @@ const styles = StyleSheet.create({
     gap: 6,
     alignSelf: 'flex-start',
   },
+  promptButtonDisabled: {
+    opacity: 0.55,
+  },
   promptButtonText: {
     color: HavynColors.white,
     fontSize: 14,
     fontWeight: '700',
+  },
+  promptButtonTextDisabled: {
+    color: 'rgba(255, 255, 255, 0.55)',
   },
   callerMeta: {
     alignItems: 'center',
