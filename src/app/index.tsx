@@ -1,25 +1,47 @@
-// src/app/index.tsx
-import { StyleSheet, Text, View } from 'react-native'
+import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+import { HavynColors } from '@/constants/havyn';
+import { SafetyTab } from '@/data/safety';
+
+import { BottomTabBar } from '@/components/safety/BottomTabBar';
+import { CallScreen } from '@/components/safety/CallScreen';
+import { MapScreen } from '@/components/safety/MapScreen';
+import { PlanScreen } from '@/components/safety/PlanScreen';
 
 export default function HomeScreen() {
+  const [activeTab, setActiveTab] = useState<SafetyTab>('call');
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>havyn</Text>
+    <View style={styles.screen}>
+      <StatusBar style="dark" />
+      <View style={styles.phoneFrame}>
+        <View style={styles.content}>
+          {activeTab === 'plan' ? <PlanScreen /> : null}
+          {activeTab === 'call' ? <CallScreen /> : null}
+          {activeTab === 'map' ? <MapScreen /> : null}
+        </View>
+        <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
+      </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: HavynColors.surface,
   },
-  text: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '300',
-    letterSpacing: 4,
-  }
-})
+  phoneFrame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    backgroundColor: HavynColors.surface,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: HavynColors.background,
+  },
+});

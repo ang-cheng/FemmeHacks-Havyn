@@ -1,0 +1,301 @@
+import { Feather } from '@expo/vector-icons';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { HavynColors } from '@/constants/havyn';
+import { emergencyContacts, scenarioOptions, voiceOptions } from '@/data/safety';
+
+import { InitialAvatar, SectionHeader, SelectionCard, StatusPill, SurfaceCard, ToggleSwitch } from './common';
+
+export function PlanScreen() {
+  const [selectedScenarioId, setSelectedScenarioId] = useState(scenarioOptions[0]?.id ?? 'friend');
+  const [selectedVoiceId, setSelectedVoiceId] = useState(voiceOptions[0]?.id ?? 'calm-female');
+  const [sendTextEnabled, setSendTextEnabled] = useState(true);
+  const [shareLocationEnabled, setShareLocationEnabled] = useState(true);
+  const [checkInEnabled, setCheckInEnabled] = useState(true);
+  const [checkInMinutes, setCheckInMinutes] = useState(10);
+
+  const selectedScenario =
+    scenarioOptions.find((scenario) => scenario.id === selectedScenarioId) ?? scenarioOptions[0];
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <SectionHeader
+        title="Safety Plan"
+        subtitle="Customize your emergency settings and default support flow."
+      />
+
+      <View style={styles.sectionStack}>
+        <SurfaceCard style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Call Scenario</Text>
+          <View style={styles.cardStack}>
+            {scenarioOptions.map((scenario) => (
+              <SelectionCard
+                key={scenario.id}
+                title={scenario.title}
+                description={scenario.description}
+                selected={scenario.id === selectedScenarioId}
+                onPress={() => setSelectedScenarioId(scenario.id)}
+              />
+            ))}
+          </View>
+
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeader}>
+              <Text style={styles.previewLabel}>Script Preview</Text>
+              <Pressable accessibilityRole="button" style={styles.previewAction}>
+                <Text style={styles.previewActionText}>Edit</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.previewBody}>{selectedScenario.script}</Text>
+          </View>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Voice Selection</Text>
+          <View style={styles.cardStack}>
+            {voiceOptions.map((voice) => (
+              <SelectionCard
+                key={voice.id}
+                title={voice.name}
+                description={voice.description}
+                selected={voice.id === selectedVoiceId}
+                onPress={() => setSelectedVoiceId(voice.id)}
+                rightAccessory={
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setSelectedVoiceId(voice.id)}
+                    style={styles.playButton}
+                  >
+                    <Feather color={HavynColors.text} name="play" size={16} />
+                  </Pressable>
+                }
+              />
+            ))}
+          </View>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.sectionCard}>
+          <View style={styles.inlineHeader}>
+            <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+            <Pressable accessibilityRole="button" style={styles.addButton}>
+              <Feather color={HavynColors.white} name="plus" size={16} />
+              <Text style={styles.addButtonText}>Add Contact</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.cardStack}>
+            {emergencyContacts.map((contact) => (
+              <View key={contact.id} style={styles.contactRow}>
+                <InitialAvatar initials={contact.initials} />
+                <View style={styles.contactBody}>
+                  <Text style={styles.contactName}>{contact.name}</Text>
+                  <Text style={styles.contactPhone}>{contact.phone}</Text>
+                </View>
+                <StatusPill label={contact.status} tone={contact.status === 'Primary' ? 'accent' : 'success'} />
+              </View>
+            ))}
+          </View>
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Auto Safety Features</Text>
+          <View style={styles.settingList}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingBody}>
+                <Text style={styles.settingTitle}>Send text if call triggered</Text>
+                <Text style={styles.settingDescription}>Alert your contacts via SMS.</Text>
+              </View>
+              <ToggleSwitch value={sendTextEnabled} onValueChange={setSendTextEnabled} />
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingBody}>
+                <Text style={styles.settingTitle}>Share live location</Text>
+                <Text style={styles.settingDescription}>Real-time GPS tracking during an event.</Text>
+              </View>
+              <ToggleSwitch value={shareLocationEnabled} onValueChange={setShareLocationEnabled} />
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingBody}>
+                <Text style={styles.settingTitle}>Check-in timer</Text>
+                <Text style={styles.settingDescription}>Auto-alert if you do not respond.</Text>
+              </View>
+              <View style={styles.checkInControls}>
+                <ToggleSwitch value={checkInEnabled} onValueChange={setCheckInEnabled} />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setCheckInMinutes((current) => (current === 15 ? 5 : current + 5))}
+                  style={styles.checkInButton}
+                >
+                  <Text style={styles.checkInButtonText}>{checkInMinutes} min</Text>
+                  <Feather color={HavynColors.textSoft} name="chevron-down" size={16} />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </SurfaceCard>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: HavynColors.background,
+  },
+  content: {
+    paddingBottom: 28,
+  },
+  sectionStack: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 16,
+  },
+  sectionCard: {
+    gap: 18,
+  },
+  sectionTitle: {
+    color: HavynColors.text,
+    fontSize: 19,
+    fontWeight: '700',
+  },
+  cardStack: {
+    gap: 12,
+  },
+  previewCard: {
+    borderRadius: 22,
+    backgroundColor: HavynColors.surfaceMuted,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  previewLabel: {
+    color: HavynColors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  previewAction: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  previewActionText: {
+    color: HavynColors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  previewBody: {
+    color: HavynColors.textMuted,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavynColors.surfaceMuted,
+  },
+  inlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: HavynColors.accent,
+  },
+  addButtonText: {
+    color: HavynColors.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 22,
+    backgroundColor: HavynColors.surfaceMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  contactBody: {
+    flex: 1,
+    gap: 4,
+  },
+  contactName: {
+    color: HavynColors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  contactPhone: {
+    color: HavynColors.textMuted,
+    fontSize: 13,
+  },
+  settingList: {
+    gap: 14,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingBody: {
+    flex: 1,
+    gap: 4,
+  },
+  settingTitle: {
+    color: HavynColors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  settingDescription: {
+    color: HavynColors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: HavynColors.border,
+  },
+  checkInControls: {
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  checkInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: HavynColors.surfaceMuted,
+  },
+  checkInButtonText: {
+    color: HavynColors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+});
