@@ -13,233 +13,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors, HavynShadow } from '@/constants/havyn';
-import { voiceOptions } from '@/data/safety';
 import { useSafetyPlan } from '@/context/SafetyPlanContext';
 import { useCall } from '@/context/call';
+import { voiceOptions } from '@/data/safety';
 
 type CallScreenProps = {
   onOpenMap: () => void;
 };
-
-export function CallScreen({ onOpenMap }: CallScreenProps) {
-  const { selectedScenario, selectedVoiceId } = useSafetyPlan();
-  const [tapCount, setTapCount] = useState(0);
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pulseOne = useRef(new Animated.Value(0)).current;
-  const pulseTwo = useRef(new Animated.Value(0)).current;
-  const { callStage, expandCall, isCallMinimized, startCall } = useCall();
-
-  const selectedVoiceLabel = useMemo(
-    () => voiceOptions.find((voice) => voice.id === selectedVoiceId)?.name ?? 'Configured voice',
-    [selectedVoiceId]
-  );
-
-  useEffect(() => {
-    if (tapCount === 0 || callStage !== 'idle') {
-      pulseOne.stopAnimation();
-      pulseTwo.stopAnimation();
-      pulseOne.setValue(0);
-      pulseTwo.setValue(0);
-      return;
-    }
-
-    const pulseAnimation = (value: Animated.Value, delay = 0) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(value, {
-            toValue: 1,
-            duration: 1200,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(value, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-    const one = pulseAnimation(pulseOne);
-    const two = pulseAnimation(pulseTwo, 260);
-
-    one.start();
-    two.start();
-
-    return () => {
-      one.stop();
-      two.stop();
-      pulseOne.setValue(0);
-      pulseTwo.setValue(0);
-    };
-  }, [callStage, pulseOne, pulseTwo, tapCount]);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimerRef.current) {
-        clearTimeout(resetTimerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (callStage !== 'idle') {
-      setTapCount(0);
-    }
-  }, [callStage]);
-
-  const handleTap = () => {
-    if (callStage !== 'idle') {
-      expandCall();
-      return;
-    }
-
-    const nextCount = tapCount + 1;
-
-    if (resetTimerRef.current) {
-      clearTimeout(resetTimerRef.current);
-    }
-
-    if (nextCount >= 3) {
-      setTapCount(0);
-      startCall();
-      return;
-    }
-
-    setTapCount(nextCount);
-    resetTimerRef.current = setTimeout(() => {
-      setTapCount(0);
-    }, 2000);
-  };
-
-  const titleText =
-    callStage === 'idle'
-      ? tapCount > 0
-        ? `Tap ${3 - tapCount} more time${3 - tapCount > 1 ? 's' : ''}`
-        : 'Tap 3 times to start call'
-      : isCallMinimized
-        ? 'Call minimized over the map'
-        : 'Call already in progress';
-
-  const bodyText =
-    callStage === 'idle'
-      ? 'Your contacts and nearby helpers will be alerted if you need a discreet exit.'
-      : isCallMinimized
-        ? 'The fake transcript and TTS keep running while you browse nearby safe places underneath.'
-        : 'Use the minimize control in the fake call to navigate on the map without ending it.';
-
-  return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.infoBadge}>
-        <Feather color={HavynColors.accent} name="shield" size={16} />
-        <Text style={styles.infoBadgeText}>
-          {callStage === 'idle' ? 'Ready to assist you' : 'Fake call is running'}
-        </Text>
-      </View>
-
-      <View style={styles.centerStack}>
-        <View style={styles.callButtonWrap}>
-          {tapCount > 0 && callStage === 'idle' ? (
-            <>
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.callButtonPulse,
-                  {
-                    opacity: pulseOne.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.38, 0],
-                    }),
-                    transform: [
-                      {
-                        scale: pulseOne.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [1, 1.34],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.callButtonPulse,
-                  {
-                    opacity: pulseTwo.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.24, 0],
-                    }),
-                    transform: [
-                      {
-                        scale: pulseTwo.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [1, 1.52],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
-            </>
-          ) : null}
-
-          <Pressable accessibilityRole="button" onPress={handleTap} style={styles.callButtonPressable}>
-            <LinearGradient
-              colors={[HavynColors.accent, HavynColors.accentDark]}
-              start={{ x: 0.15, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={styles.callButton}
-            >
-              <Feather
-                color={HavynColors.white}
-                name={callStage === 'idle' ? 'phone' : isCallMinimized ? 'maximize-2' : 'phone-call'}
-                size={76}
-              />
-            </LinearGradient>
-
-            {tapCount > 0 && callStage === 'idle' ? (
-              <View style={styles.tapBadge}>
-                <Text style={styles.tapBadgeText}>{tapCount}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        </View>
-
-        <View style={styles.instructions}>
-          <Text style={styles.instructionsTitle}>{titleText}</Text>
-          <Text style={styles.instructionsBody}>{bodyText}</Text>
-        </View>
-      </View>
-
-      <View style={styles.bottomCard}>
-        <View style={styles.bottomCardDot} />
-        <View style={styles.bottomCardBody}>
-          <Text style={styles.bottomCardTitle}>Emergency mode</Text>
-          <Text style={styles.bottomCardText}>
-            {callStage === 'idle'
-              ? 'Launches a believable call screen so you can leave an unsafe situation without drawing attention.'
-              : 'When minimized, the fake call floats above the map so you can keep navigating without ending it.'}
-          </Text>
-          <Text style={styles.planDetailText}>Scenario: {selectedScenario.title}</Text>
-          <Text style={styles.planDetailText}>Voice: {selectedVoiceLabel}</Text>
-        </View>
-      </View>
-
-      {callStage !== 'idle' ? (
-        <Pressable accessibilityRole="button" onPress={onOpenMap} style={styles.quickMapButton}>
-          <Feather color={HavynColors.accent} name="map-pin" size={18} />
-          <Text style={styles.quickMapButtonText}>Go to map while call continues</Text>
-        </Pressable>
-      ) : null}
-    </ScrollView>
-  );
-}
 
 const styles = StyleSheet.create({
   screen: {
@@ -399,3 +179,204 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+export function CallScreen({ onOpenMap }: CallScreenProps) {
+  const { selectedScenario, selectedVoiceId } = useSafetyPlan();
+  const [tapCount, setTapCount] = useState(0);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulseOne = useRef(new Animated.Value(0)).current;
+  const pulseTwo = useRef(new Animated.Value(0)).current;
+  const { callStage, expandCall, isCallMinimized, startCall } = useCall();
+
+  const selectedVoiceLabel = useMemo(
+    () => voiceOptions.find((voice) => voice.id === selectedVoiceId)?.name ?? 'Configured voice',
+    [selectedVoiceId]
+  );
+
+  useEffect(() => {
+    if (tapCount === 0 || callStage !== 'idle') {
+      pulseOne.stopAnimation();
+      pulseTwo.stopAnimation();
+      pulseOne.setValue(0);
+      pulseTwo.setValue(0);
+      return;
+    }
+
+    const pulseAnimation = (value: Animated.Value, delay = 0) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(value, {
+            toValue: 1,
+            duration: 1200,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(value, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+    const one = pulseAnimation(pulseOne);
+    const two = pulseAnimation(pulseTwo, 260);
+
+    one.start();
+    two.start();
+
+    return () => {
+      one.stop();
+      two.stop();
+      pulseOne.setValue(0);
+      pulseTwo.setValue(0);
+    };
+  }, [callStage, pulseOne, pulseTwo, tapCount]);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) {
+        clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (callStage !== 'idle') {
+      setTapCount(0);
+    }
+  }, [callStage]);
+
+  const handleTap = () => {
+    if (callStage !== 'idle') {
+      expandCall();
+      return;
+    }
+
+    const nextCount = tapCount + 1;
+
+    if (resetTimerRef.current) {
+      clearTimeout(resetTimerRef.current);
+    }
+
+    if (nextCount >= 3) {
+      setTapCount(0);
+      startCall();
+      return;
+    }
+
+    setTapCount(nextCount);
+    resetTimerRef.current = setTimeout(() => {
+      setTapCount(0);
+    }, 2000);
+  };
+
+  const titleText =
+    callStage === 'idle'
+      ? tapCount > 0
+        ? `Tap ${3 - tapCount} more time${3 - tapCount > 1 ? 's' : ''}`
+        : 'Tap 3 times to start call'
+      : isCallMinimized
+        ? 'Call minimized over the map'
+        : 'Call already in progress';
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+
+      <View style={styles.centerStack}>
+        <View style={styles.callButtonWrap}>
+          {tapCount > 0 && callStage === 'idle' ? (
+            <>
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.callButtonPulse,
+                  {
+                    opacity: pulseOne.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.38, 0],
+                    }),
+                    transform: [
+                      {
+                        scale: pulseOne.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.34],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.callButtonPulse,
+                  {
+                    opacity: pulseTwo.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.24, 0],
+                    }),
+                    transform: [
+                      {
+                        scale: pulseTwo.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.52],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            </>
+          ) : null}
+
+          <Pressable accessibilityRole="button" onPress={handleTap} style={styles.callButtonPressable}>
+            <LinearGradient
+              colors={[HavynColors.accent, HavynColors.accentDark]}
+              start={{ x: 0.15, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+              style={styles.callButton}
+            >
+              <Feather
+                color={HavynColors.white}
+                name={callStage === 'idle' ? 'phone' : isCallMinimized ? 'maximize-2' : 'phone-call'}
+                size={76}
+              />
+            </LinearGradient>
+
+            {tapCount > 0 && callStage === 'idle' ? (
+              <View style={styles.tapBadge}>
+                <Text style={styles.tapBadgeText}>{tapCount}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+        </View>
+
+        <View style={styles.instructions}>
+          <Text style={styles.instructionsTitle}>{titleText}</Text>
+        </View>
+      </View>
+
+      <View style={styles.bottomCard}>
+        <View style={styles.bottomCardDot} />
+        <View style={styles.bottomCardBody}>
+          <Text style={styles.bottomCardTitle}>Emergency mode</Text>
+          <Text style={styles.planDetailText}>Scenario: {selectedScenario.title}</Text>
+          <Text style={styles.planDetailText}>Voice: {selectedVoiceLabel}</Text>
+        </View>
+      </View>
+
+      {callStage !== 'idle' ? (
+        <Pressable accessibilityRole="button" onPress={onOpenMap} style={styles.quickMapButton}>
+          <Feather color={HavynColors.accent} name="map-pin" size={18} />
+          <Text style={styles.quickMapButtonText}>Go to map while call continues</Text>
+        </Pressable>
+      ) : null}
+      </ScrollView>
+  );
+}
