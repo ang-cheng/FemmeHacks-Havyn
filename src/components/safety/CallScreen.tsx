@@ -13,13 +13,172 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { HavynColors, HavynShadow } from '@/constants/havyn';
-import { voiceOptions } from '@/data/safety';
 import { useSafetyPlan } from '@/context/SafetyPlanContext';
 import { useCall } from '@/context/call';
+import { voiceOptions } from '@/data/safety';
 
 type CallScreenProps = {
   onOpenMap: () => void;
 };
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: HavynColors.background,
+  },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    justifyContent: 'center',
+    gap: 26,
+  },
+  infoBadge: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    backgroundColor: HavynColors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: HavynColors.border,
+    ...HavynShadow,
+  },
+  infoBadgeText: {
+    color: HavynColors.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  centerStack: {
+    alignItems: 'center',
+    gap: 30,
+  },
+  callButtonWrap: {
+    width: 264,
+    height: 264,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  callButtonPulse: {
+    position: 'absolute',
+    width: 264,
+    height: 264,
+    borderRadius: 132,
+    backgroundColor: HavynColors.accent,
+  },
+  callButtonPressable: {
+    width: 264,
+    height: 264,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  callButton: {
+    width: 264,
+    height: 264,
+    borderRadius: 132,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: HavynColors.accent,
+    shadowOffset: { width: 0, height: 22 },
+    shadowOpacity: 0.32,
+    shadowRadius: 30,
+    elevation: 18,
+  },
+  tapBadge: {
+    position: 'absolute',
+    right: 18,
+    top: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: HavynColors.white,
+    ...HavynShadow,
+  },
+  tapBadgeText: {
+    color: HavynColors.accent,
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  instructions: {
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+  },
+  instructionsTitle: {
+    color: HavynColors.text,
+    fontSize: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: -0.6,
+  },
+  instructionsBody: {
+    color: HavynColors.textMuted,
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    maxWidth: 320,
+  },
+  bottomCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: HavynColors.border,
+    backgroundColor: HavynColors.surface,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    ...HavynShadow,
+  },
+  bottomCardDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: HavynColors.accent,
+    marginTop: 6,
+  },
+  bottomCardBody: {
+    flex: 1,
+    gap: 4,
+  },
+  bottomCardTitle: {
+    color: HavynColors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  bottomCardText: {
+    color: HavynColors.textMuted,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  planDetailText: {
+    color: HavynColors.accentDeep,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  quickMapButton: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: HavynColors.surface,
+    borderWidth: 1,
+    borderColor: HavynColors.border,
+    ...HavynShadow,
+  },
+  quickMapButtonText: {
+    color: HavynColors.accentDeep,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+});
 
 export function CallScreen({ onOpenMap }: CallScreenProps) {
   const { selectedScenario, selectedVoiceId } = useSafetyPlan();
@@ -229,7 +388,7 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
           <Text style={styles.planDetailText}>Scenario: {selectedScenario.title}</Text>
           <Text style={styles.planDetailText}>Voice: {selectedVoiceLabel}</Text>
         </View>
-      </View>
+      </ScrollView>
 
       {callStage !== 'idle' ? (
         <Pressable accessibilityRole="button" onPress={onOpenMap} style={styles.quickMapButton}>
@@ -237,165 +396,6 @@ export function CallScreen({ onOpenMap }: CallScreenProps) {
           <Text style={styles.quickMapButtonText}>Go to map while call continues</Text>
         </Pressable>
       ) : null}
-    </ScrollView>
+      </>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: HavynColors.background,
-  },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    justifyContent: 'center',
-    gap: 26,
-  },
-  infoBadge: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: HavynColors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: HavynColors.border,
-    ...HavynShadow,
-  },
-  infoBadgeText: {
-    color: HavynColors.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  centerStack: {
-    alignItems: 'center',
-    gap: 30,
-  },
-  callButtonWrap: {
-    width: 264,
-    height: 264,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  callButtonPulse: {
-    position: 'absolute',
-    width: 264,
-    height: 264,
-    borderRadius: 132,
-    backgroundColor: HavynColors.accent,
-  },
-  callButtonPressable: {
-    width: 264,
-    height: 264,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  callButton: {
-    width: 264,
-    height: 264,
-    borderRadius: 132,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: HavynColors.accent,
-    shadowOffset: { width: 0, height: 22 },
-    shadowOpacity: 0.32,
-    shadowRadius: 30,
-    elevation: 18,
-  },
-  tapBadge: {
-    position: 'absolute',
-    right: 18,
-    top: 18,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: HavynColors.white,
-    ...HavynShadow,
-  },
-  tapBadgeText: {
-    color: HavynColors.accent,
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  instructions: {
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 18,
-  },
-  instructionsTitle: {
-    color: HavynColors.text,
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: -0.6,
-  },
-  instructionsBody: {
-    color: HavynColors.textMuted,
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: 'center',
-    maxWidth: 320,
-  },
-  bottomCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: HavynColors.border,
-    backgroundColor: HavynColors.surface,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    ...HavynShadow,
-  },
-  bottomCardDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: HavynColors.accent,
-    marginTop: 6,
-  },
-  bottomCardBody: {
-    flex: 1,
-    gap: 4,
-  },
-  bottomCardTitle: {
-    color: HavynColors.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  bottomCardText: {
-    color: HavynColors.textMuted,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  planDetailText: {
-    color: HavynColors.accentDeep,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  quickMapButton: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: HavynColors.surface,
-    borderWidth: 1,
-    borderColor: HavynColors.border,
-    ...HavynShadow,
-  },
-  quickMapButtonText: {
-    color: HavynColors.accentDeep,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
