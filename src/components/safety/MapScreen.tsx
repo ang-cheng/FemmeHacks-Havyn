@@ -22,8 +22,8 @@ import {
   getBearingDegrees,
   getBearingLabel,
   getFallbackOrigin,
-  rankSafePlaces,
   RankedSafePlace,
+  rankSafePlaces,
 } from '@/utils/map';
 
 import { FilterChip, SectionHeader, SurfaceCard } from './common';
@@ -293,7 +293,6 @@ export function MapScreen() {
       <View style={{ paddingTop: 50 }}>
         <SectionHeader
           title="Nearby Safe Places"
-          subtitle="Find open campus resources and a fast route to help."
         />
       </View>
 
